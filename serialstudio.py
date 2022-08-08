@@ -14,7 +14,7 @@ import serial
 import serial.tools.list_ports as lp
 import numpy as np
 from scipy.fftpack import fft
-import parser as sp
+import serialparser as sp
 
 import json
 class ConfigParser():
@@ -28,7 +28,6 @@ class ConfigParser():
                 return data
         except:
             return
-
 
     def saveConfig(self, parameters:dict):
         try:
@@ -183,8 +182,6 @@ class SerialStudio(QtWidgets.QWidget):
         config_menu.addAction(load_action)
         config_menu.addAction(restore_action)
 
-
-
         vbox.addWidget(menu_bar)
         vbox.addWidget(splitter, 1)
         vbox.addWidget(self.statusBar)
@@ -250,7 +247,6 @@ class SerialStudio(QtWidgets.QWidget):
             self.statusBar.showMessage(msg)
             print(msg)
         
-
     def loadconfig(self):
         params = self.config.loadConfig()
         if params:
@@ -304,8 +300,8 @@ class SerialStudio(QtWidgets.QWidget):
         with plotteropts.treeChangeBlocker():
             plotteropts.child('Autoscale').setValue(self.parameters['plotter']['autoscale'])
             plotteropts.child('Plot Length').setValue(self.parameters['plotter']['buffersize'])
-            plotteropts.child('Multiplier').setValue(self.parameters['plotter']['offset'])
-            plotteropts.child('Offset').setValue(self.parameters['plotter']['multiplier'])
+            plotteropts.child('Multiplier').setValue(self.parameters['plotter']['multiplier'])
+            plotteropts.child('Offset').setValue(self.parameters['plotter']['offset'])
 
         with fftopts.treeChangeBlocker():
             fftopts.child('Autoscale').setValue(self.parameters['fft']['autoscale'])
@@ -571,7 +567,6 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     ex = SerialStudio()
     sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
     main()

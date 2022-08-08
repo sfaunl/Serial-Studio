@@ -3,6 +3,7 @@ Created on Sat Apr 23 02:08:23 2022
 
 @file: serialstudio.py
 @author: Sefa Unal
+@version: 0.2.1
 """
 import pyqtgraph as pg
 import pyqtgraph.parametertree as ptree
@@ -40,6 +41,7 @@ class ConfigParser():
 
 class SerialStudio(QtWidgets.QWidget):
     appname = "Serial Studio"
+    version = "0.2.1"
 
     parameters = {
         'conn': {
@@ -112,24 +114,32 @@ class SerialStudio(QtWidgets.QWidget):
         ]),
         dict(name='stats', title='Stats', type='group', children=[
             dict(name='Packet/s', type='int',value=0, readonly=True, units='pps'),
-            dict(name='Queue', type='int', value=0,readonly=True, units='packets'),
             dict(name='Error/s', type='int',value=0, readonly=True, units='pps'),
+            dict(name='Queue', type='int', value=0,readonly=True, units='bytes'),
         ]),
     ]
 
     def __init__(self, debug=False):
         super().__init__()
         self.debug = debug
+        self.ser = None
+        self.queue = 0
+        self.chdata = []
+
         self.defaultParams = self.parameters
         self.config = ConfigParser()
         self.initUI()
         self.initParser()
-        self.loadconfig()
-        
-    def initUI(self):
-        self.ser = None
-        self.queue = 0
+        configLoaded = self.loadconfig()
+        if configLoaded == False:
+            # init paramtree values manually
+            self.paramSerialChanged()
+            self.paramParserChanged()
+            self.paramPlotterChanged()
+            self.paramFftChanged()
+            self.paramChannelChanged()
 
+    def initUI(self):
         # Parameter tree object
         self.params = ptree.Parameter.create(name='Parameters', type='group', children=self.ptchildren)
         paramtree = ptree.ParameterTree(showHeader=False)
@@ -189,12 +199,10 @@ class SerialStudio(QtWidgets.QWidget):
 
         # self.move(300, 200)
         self.resize(1024, 700)
-        self.setWindowTitle(self.appname)
+        self.setWindowTitle("{} - v{}".format(self.appname, self.version))
         self.show()
 
     def initParser(self):
-        self.chdata = []
-
         # set parser
         self.parser = sp.SerialParser(aStartSequence=self.parameters['parser']['startbyte'],
                                       aEndSequence=self.parameters['parser']['endbyte'],
@@ -205,19 +213,15 @@ class SerialStudio(QtWidgets.QWidget):
         # calculate X values for the plotter
         self.calculateXAxes()
 
-        self.paramSerialChanged()
-        self.paramParserChanged()
-        self.paramPlotterChanged()
-        self.paramFftChanged()
-        self.paramChannelChanged()
-
         # update timers
         self.last_update = time.perf_counter()
         self.mean_dt = None
 
+        # 60Hz
         self.timer = QtCore.QTimer(timerType=QtCore.Qt.TimerType.PreciseTimer)
         self.timer.timeout.connect(self.update)
-        self.timer.start(33)
+        self.timer.start(16)
+        # 2Hz
         self.timerui = QtCore.QTimer()
         self.timerui.timeout.connect(self.updateui)
         self.timerui.start(500)
@@ -232,9 +236,6 @@ class SerialStudio(QtWidgets.QWidget):
             T = 1 / self.parser.getPacketPerSecond()  # 0.001
         self.Xt = np.linspace(0.0, ltplotlength*T, ltplotlength)
         self.Xf = np.linspace(0.0, 1.0/(2*T),   lfNSamples // 2)
-        self.Yf0 = np.linspace(0.0, lfNSamples*T, lfNSamples // 2)
-        self.Yf1 = np.linspace(0.0, lfNSamples*T, lfNSamples // 2)
-        self.Yf2 = np.linspace(0.0, lfNSamples*T, lfNSamples // 2)
 
     def saveconfig(self):
         retval = self.config.saveConfig(self.parameters)
@@ -255,10 +256,12 @@ class SerialStudio(QtWidgets.QWidget):
             msg = "Config file loaded"
             self.statusBar.showMessage(msg)
             print(msg)
+            return True
         else:
             msg = "Error loading config file"
             self.statusBar.showMessage(msg)
             print(msg)
+            return False
 
     def restoreconfig(self):
         self.parameters = self.defaultParams
@@ -273,6 +276,7 @@ class SerialStudio(QtWidgets.QWidget):
         plotteropts = self.params.child('plotteropts')
         fftopts = self.params.child('fftopts')
 
+        #seropts
         with seropts.treeChangeBlocker():
             seropts.child('Custom Port').setValue(True)
             seropts.child('PortStr').setValue(self.parameters['conn']['portname'])
@@ -281,6 +285,7 @@ class SerialStudio(QtWidgets.QWidget):
             seropts.child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
             seropts.child('Parity').setValue(self.parameters['conn']['parity'])
 
+        #parseropts
         with parseropts.treeChangeBlocker():
             startbytelist = self.parameters['parser']['startbyte']
             hexstr = ""
@@ -297,12 +302,14 @@ class SerialStudio(QtWidgets.QWidget):
             parseropts.child('DataType').setValue(self.parameters['parser']['datatype'])
             parseropts.child('Endianness').setValue(self.parameters['parser']['endianness'])
 
+        #plotteropts
         with plotteropts.treeChangeBlocker():
             plotteropts.child('Autoscale').setValue(self.parameters['plotter']['autoscale'])
             plotteropts.child('Plot Length').setValue(self.parameters['plotter']['buffersize'])
             plotteropts.child('Multiplier').setValue(self.parameters['plotter']['multiplier'])
             plotteropts.child('Offset').setValue(self.parameters['plotter']['offset'])
 
+        #fftopts
         with fftopts.treeChangeBlocker():
             fftopts.child('Autoscale').setValue(self.parameters['fft']['autoscale'])
             fftopts.child('Show DC').setValue(self.parameters['fft']['showdc'])
@@ -500,6 +507,11 @@ class SerialStudio(QtWidgets.QWidget):
         try:
             inw = self.ser.in_waiting
             lDataBuffer = self.parser.parse(self.ser.read(inw))
+
+            self.queue = inw
+            if inw == 0:
+                return
+
         except:
             self.disconnect()
             print("Port disconnected...")
@@ -508,8 +520,7 @@ class SerialStudio(QtWidgets.QWidget):
         if len(lDataBuffer) == 0:
             return
 
-        self.queue = len(lDataBuffer[0])
-        if self.queue == 0:
+        if len(lDataBuffer[0]) == 0:
             return
 
         multiplier = self.parameters['plotter']['multiplier']

@@ -1,7 +1,7 @@
 """
 Created on Sat Apr 23 02:02:34 2022
 
-@file: parser.py
+@file: serialparser.py
 @author: Sefa Unal
 """
 import struct
@@ -64,8 +64,7 @@ class SerialParser:
         self.endSequence        = aEndSequence
         self.endianness         = aEndianness
         
-        sizex = DataType().getSize(self.dataType)
-        self.payloadSize        = self.numChannels * sizex
+        self.payloadSize        = self.numChannels * DataType().getSize(self.dataType)
         self.headerSize         = len(self.startSequence)
         self.packetSize         = self.headerSize + self.payloadSize + len(self.endSequence)
         
@@ -118,13 +117,14 @@ class SerialParser:
                 continue
             
             # found a valid packet
-            byte_range = self.buffer[self.headerSize:self.headerSize + self.payloadSize]
-            parsedValues = struct.unpack(self.parserString, byte_range)
+            byteRange = self.buffer[self.headerSize:self.headerSize + self.payloadSize]
+            parsedValues = struct.unpack(self.parserString, byteRange)
             parsedPackets.append(parsedValues)
             
             # remove parsed packet from buffer
             self.buffer = self.buffer[self.packetSize:]
 
+        # calculate incoming packet/error rate 
         self.packetCnt += len(parsedPackets)
         curTime = time.perf_counter()
         if self.startTime == 0:

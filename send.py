@@ -4,11 +4,11 @@ import struct
 import numpy as np
 
 # bytes = bytearray([0xAA, 0xBB, 0x0, 0x0, 0x0, 0x0, 0x1, 0x1, 0x0, 0x0, 0x9, 0x0, 0x0, 0x0])
-sp = serial.Serial(port="/dev/pts/1")
+sp = serial.Serial(port="/dev/pts/3")
 #socat -ddd pty,raw,echo=0 pty,raw,echo=0
 
 nsamples = 2000
-Fs = 7500
+Fs = 10000
 F1 = 1
 F2 = 1250
 F3 = 2499
@@ -21,7 +21,7 @@ data = A*np.sin(2*np.pi*F1*ttt)
 data += A*np.sin(2*np.pi*F2*ttt)
 data += A*np.sin(2*np.pi*F3*ttt)
 data += A*np.sin(2*np.pi*F4*ttt)
-data += A*np.random.normal(size=data.shape)
+#data += A*np.random.normal(size=data.shape)
 
 oldTime = time.perf_counter()
 while 1:

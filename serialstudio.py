@@ -1,39 +1,51 @@
 """
 Created on Sat Apr 23 02:08:23 2022
 
-@file: serialstudio.py
-@author: Sefa Unal
-@version: 0.2.1
+@file       serialstudio.py
+@brief      Serial data visualizer
+@author     Sefa Unal
+
+@version    0.2.2
+@date       25/08/2022
+@since		v0.1 : initial release
+@since		v0.2 : add multiplier and offset
+@since		v0.2.1 : fix loading incorrect parameters
+@since		v0.2.2 : add plot screenshot functionality (thanks to 220523)
 """
+
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtWidgets import *
+
 import pyqtgraph as pg
 import pyqtgraph.parametertree as ptree
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QAction
+import pyqtgraph.exporters
+
 import sys
 import time
 import serial
 import serial.tools.list_ports as lp
 import numpy as np
 from scipy.fftpack import fft
+import json
+
 import serialparser as sp
 
-import json
 class ConfigParser():
     def __init__(self, filename = "config.json"):
         self.configfile = filename
 
     def loadConfig(self):
         try:
-            with open(self.configfile) as json_data_file:
-                data = json.load(json_data_file)
+            with open(self.configfile) as json_config_file:
+                data = json.load(json_config_file)
                 return data
         except:
             return
 
     def saveConfig(self, parameters:dict):
         try:
-            with open(self.configfile,"w") as j:
-                json.dump(parameters,j,indent = 2)
+            with open(self.configfile, "w") as json_config_file:
+                json.dump(parameters, json_config_file, indent=2)
             return True
         except:
             return False
@@ -153,40 +165,55 @@ class SerialStudio(QtWidgets.QWidget):
         self.params.child('connect').sigActivated.connect(self.connect)
 
         # plotter object
-        glw = pg.GraphicsLayoutWidget()
-        self.plotter_t = glw.addPlot(row=0, col=0)
+        self.glw = pg.GraphicsLayoutWidget()
+
+        self.plotter_t = self.glw.addPlot(row=0, col=0)
         self.plotter_t.setMouseEnabled(x=True, y=False)
         self.plotter_t.setLabel('left', 'amplitude', units='v')
         self.plotter_t.setLabel('bottom', 'time', units='s')
+        self.plotter_t.enableAutoRange(axis = 'x')
         legendt = self.plotter_t.addLegend()
-        legendt.anchor((1,0), (1,0))
-        self.plotter_f = glw.addPlot(title="FFT", row=1, col=0)
+        legendt.anchor((1, 0), (1, 0))
+        self.plotter_f = self.glw.addPlot(title="FFT", row=1, col=0)
         self.plotter_f.setMouseEnabled(x=True, y=False)
         self.plotter_f.setLabel('left', 'amplitude', units='v')
         self.plotter_f.setLabel('bottom', 'freq', units='Hz')
+        self.plotter_f.enableAutoRange(axis = 'x')
         legendf = self.plotter_f.addLegend()
-        legendf.anchor((1,0), (1,0))
+        legendf.anchor((1, 0), (1, 0))
 
         vbox = QtWidgets.QVBoxLayout(self)
         self.statusBar = QtWidgets.QStatusBar(self)
 
         splitter = QtWidgets.QSplitter(self)
         splitter.addWidget(paramtree)
-        splitter.addWidget(glw)
+        splitter.addWidget(self.glw)
 
+        # menu-bar
         menu_bar = QtWidgets.QMenuBar()
         file_menu = menu_bar.addMenu('File')
-        config_menu = menu_bar.addMenu('Config')
+        capture_action = QAction('Capture Plot', self)
+        capture_action.setShortcut("CTRL+E")
+        capture_action.setIcon(QtGui.QIcon.fromTheme('insert-image'))
+        capture_action.triggered.connect(self.captureplot)
         exit_action = QAction('Exit', self)
         exit_action.setShortcut("CTRL+Q")
+        exit_action.setIcon(QtGui.QIcon.fromTheme('application-exit'))
         exit_action.triggered.connect(exit)
+        file_menu.addAction(capture_action)
+        file_menu.addSeparator()
         file_menu.addAction(exit_action)
+
+        config_menu = menu_bar.addMenu('Config')
         save_action = QAction('Save Config', self)
         save_action.setShortcut("CTRL+S")
+        save_action.setIcon(QtGui.QIcon.fromTheme('document-save'))
         save_action.triggered.connect(self.saveconfig)
         load_action = QAction('Load Config', self)
+        load_action.setIcon(QtGui.QIcon.fromTheme('document-open'))
         load_action.triggered.connect(self.loadconfig)
         restore_action = QAction('Restore Config', self)
+        restore_action.setIcon(QtGui.QIcon.fromTheme('document-revert'))
         restore_action.triggered.connect(self.restoreconfig)
         config_menu.addAction(save_action)
         config_menu.addAction(load_action)
@@ -197,7 +224,6 @@ class SerialStudio(QtWidgets.QWidget):
         vbox.addWidget(self.statusBar)
         self.setLayout(vbox)
 
-        # self.move(300, 200)
         self.resize(1024, 700)
         self.setWindowTitle("{} - v{}".format(self.appname, self.version))
         self.show()
@@ -218,7 +244,7 @@ class SerialStudio(QtWidgets.QWidget):
         self.mean_dt = None
 
         # 60Hz
-        self.timer = QtCore.QTimer(timerType=QtCore.Qt.TimerType.PreciseTimer)
+        self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(16)
         # 2Hz
@@ -234,8 +260,8 @@ class SerialStudio(QtWidgets.QWidget):
         T = 0.001
         if pps != 0:
             T = 1 / self.parser.getPacketPerSecond()  # 0.001
-        self.Xt = np.linspace(0.0, ltplotlength*T, ltplotlength)
-        self.Xf = np.linspace(0.0, 1.0/(2*T),   lfNSamples // 2)
+        self.Xt = np.linspace(0.0, ltplotlength * T, ltplotlength)
+        self.Xf = np.linspace(0.0, 1.0 / (2 * T),   lfNSamples // 2)
 
     def saveconfig(self):
         retval = self.config.saveConfig(self.parameters)
@@ -391,7 +417,6 @@ class SerialStudio(QtWidgets.QWidget):
         dataitems_f = self.plotter_f.listDataItems()
         numdataitems = len(dataitems_t)
 
-
         for ch in range(max(numchan, numdataitems)):
             if ch >= numchan:
                 self.plotter_t.removeItem(dataitems_t[ch])
@@ -486,16 +511,26 @@ class SerialStudio(QtWidgets.QWidget):
             self.statusBar.showMessage(msg)
             print(msg)
 
+    def captureplot(self):
+        exporter = pg.exporters.ImageExporter( self.glw.scene() )
+
+        filename = 'IMAG_' + time.strftime('%Y%m%d_%H%M%S')
+
+        #exporter.parameters()['width'] = 1920
+        exporter.export(filename + '.png')
+
+        msg = 'Capture recorded as ' + filename + '.png'
+        self.statusBar.showMessage(msg)
+        print(msg)
+
     def update(self):
-        """ called by timer at 30 Hz """
         timestamp = time.perf_counter()
         dt = timestamp - self.last_update
+        self.last_update = timestamp
         if self.mean_dt is None:
             self.mean_dt = dt
         else:
-            self.mean_dt = 0.95 * self.mean_dt + 0.05 * dt  # average over fluctuating measurements
-        # print('refresh: {:0.1f}ms -> {:0.1f} fps'.format( 1000*self.mean_dt, 1/self.mean_dt ))
-        self.last_update = timestamp
+            self.mean_dt = 0.95 * self.mean_dt + 0.05 * dt
 
         if self.ser == None:
             return
@@ -572,7 +607,6 @@ class SerialStudio(QtWidgets.QWidget):
         self.params.child('stats').child('Packet/s').setValue(self.parser.getPacketPerSecond())
         self.params.child('stats').child('Error/s').setValue(self.parser.getErrorPerSecond())
         self.calculateXAxes()
-
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

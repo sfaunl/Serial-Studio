@@ -53,7 +53,7 @@ class ConfigParser():
 
 class SerialStudio(QtWidgets.QWidget):
     appname = "Serial Studio"
-    version = "0.2.1"
+    version = "0.2.2"
 
     parameters = {
         'conn': {

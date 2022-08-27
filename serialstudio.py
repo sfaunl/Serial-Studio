@@ -16,7 +16,7 @@ Created on Sat Apr 23 02:08:23 2022
 
 from PySide6.QtWidgets import (
     QMainWindow, QApplication,
-    QStatusBar, QSplitter, QWidget
+    QStatusBar, QSplitter, QWidget, QHBoxLayout, QLabel
 )
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtCore import QTimer, QSize
@@ -129,11 +129,6 @@ class SerialStudio(QMainWindow):
             dict(name='Show DC', type='bool', value=False),
             dict(name='NSamples', type='int', limits=[0, None], value=1024),
         ]),
-        dict(name='stats', title='Stats', type='group', children=[
-            dict(name='Packet/s', type='int',value=0, readonly=True, units='pps'),
-            dict(name='Error/s', type='int',value=0, readonly=True, units='pps'),
-            dict(name='Queue', type='int', value=0,readonly=True, units='bytes'),
-        ]),
     ]
 
     def __init__(self, debug=False):
@@ -244,6 +239,34 @@ class SerialStudio(QMainWindow):
         config_menu.addAction(save_action)
         config_menu.addAction(load_action)
         config_menu.addAction(restore_action)
+
+        # statusbar stats
+        statswidget = QWidget(self)
+        hbox_stats = QHBoxLayout()
+        statswidget.setLayout(hbox_stats)
+
+        labeldown = QLabel()
+        labelerror = QLabel()
+        labelqueue= QLabel()
+        self.labelpacketrate = QLabel("0 pps")
+        self.labelerrorrate = QLabel("0 pps")
+        self.labelpacketqueue = QLabel("0 pps")
+        downicon = QIcon.fromTheme('go-down')
+        erroricon = QIcon.fromTheme('network-error')
+        queueicon = QIcon.fromTheme('sync-synchronizing')
+
+        labeldown.setPixmap(downicon.pixmap(QSize(16, 16)))
+        labelerror.setPixmap(erroricon.pixmap(QSize(16, 16)))
+        labelqueue.setPixmap(queueicon.pixmap(QSize(16, 16)))
+
+        hbox_stats.addWidget(labeldown)
+        hbox_stats.addWidget(self.labelpacketrate)
+        hbox_stats.addWidget(labelerror)
+        hbox_stats.addWidget(self.labelerrorrate)
+        hbox_stats.addWidget(labelqueue)
+        hbox_stats.addWidget(self.labelpacketqueue)
+
+        self.statusBar().addPermanentWidget(statswidget)
 
         # place widgets in main window
         splitter = QSplitter(self)
@@ -598,9 +621,9 @@ class SerialStudio(QMainWindow):
     def update_ui(self):
         if self.parser == None:
             return
-        self.params.child('stats').child('Queue').setValue(self.queue)
-        self.params.child('stats').child('Packet/s').setValue(self.parser.getPacketRate())
-        self.params.child('stats').child('Error/s').setValue(self.parser.getErrorRate())
+        self.labelpacketrate.setText("%d pps" % self.parser.getPacketRate())
+        self.labelerrorrate.setText("%d pps" % self.parser.getErrorRate())
+        self.labelpacketqueue.setText("Queue: %d pps" % self.queue)
         self.calculateXAxes()
 
 def main():

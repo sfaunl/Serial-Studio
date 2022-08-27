@@ -274,7 +274,7 @@ class SerialStudio(QMainWindow):
         vsplitter = QSplitter(Qt.Vertical)
         vsplitter.addWidget(paramtree)
         vsplitter.addWidget(channeltree)
-        channeltree.setMinimumHeight(100)
+        channeltree.setMinimumHeight(120)
 
         splitter = QSplitter(self)
         splitter.addWidget(vsplitter)

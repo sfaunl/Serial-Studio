@@ -46,11 +46,11 @@ class SerialParser:
         self.buffer             = bytearray()
         self.debug              = aEnableDebug
         self.setParserScheme(aStartSequence, aDataType, aNumChannel, aEndianness, aEndSequence)
-        self.packetpersec       = 0
-        self.packetCnt          = 0
+        self.packetRate         = 0
+        self.packetCount        = 0
         self.startTime          = 0
-        self.parserErrCnt       = 0
-        self.parserErrPerSec    = 0
+        self.parserErrCount     = 0
+        self.parserErrRate      = 0
 
     def setParserScheme(self, aStartSequence, 
                         aDataType:DataType, 
@@ -72,11 +72,11 @@ class SerialParser:
         for i in range(self.numChannels):
             self.parserString += DataType().getParserChar(self.dataType)
         
-    def getPacketPerSecond(self):
-        return self.packetpersec
+    def getPacketRate(self):
+        return self.packetRate
     
-    def getErrorPerSecond(self):
-        return self.parserErrPerSec // self.packetSize
+    def getErrorRate(self):
+        return self.parserErrRate // self.packetSize
 
     def getExpected(self):
         explst = []
@@ -101,7 +101,7 @@ class SerialParser:
             if lNotFound:
                 # remove a byte and search again
                 self.buffer.pop(0)
-                self.parserErrCnt += 1
+                self.parserErrCount += 1
                 continue
             
             # search for end sequence
@@ -113,7 +113,7 @@ class SerialParser:
             if lNotFound:
                 # remove a byte and search again
                 self.buffer.pop(0)
-                self.parserErrCnt += 1
+                self.parserErrCount += 1
                 continue
             
             # found a valid packet
@@ -125,17 +125,17 @@ class SerialParser:
             self.buffer = self.buffer[self.packetSize:]
 
         # calculate incoming packet/error rate 
-        self.packetCnt += len(parsedPackets)
+        self.packetCount += len(parsedPackets)
         curTime = time.perf_counter()
         if self.startTime == 0:
             self.startTime = curTime
         else:
             timeDelta = curTime - self.startTime
             if timeDelta > 1: # calculate packetpersecond value every second
-                self.packetpersec = self.packetpersec * 0.3 + (self.packetCnt / timeDelta) * 0.7
-                self.packetCnt = 0;
-                self.parserErrPerSec = self.parserErrPerSec * 0.3 + (self.parserErrCnt / timeDelta) * 0.7
-                self.parserErrCnt = 0
+                self.packetRate = self.packetRate * 0.3 + (self.packetCount / timeDelta) * 0.7
+                self.packetCount = 0;
+                self.parserErrRate = self.parserErrRate * 0.3 + (self.parserErrCount / timeDelta) * 0.7
+                self.parserErrCount = 0
                 
                 self.startTime = curTime
                 

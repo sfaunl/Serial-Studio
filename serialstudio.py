@@ -553,22 +553,21 @@ class SerialStudio(QMainWindow):
         if self.ser == None:
             return
 
-        if not self.ser.is_open:
-            return
+        data = bytes()
 
-        lDataBuffer = None
-        try:
-            inw = self.ser.in_waiting
-            lDataBuffer = self.parser.parse(self.ser.read(inw))
+        if self.ser.is_open:
+            try:
+                inw = self.ser.in_waiting
+                data = self.ser.read(inw)
 
-            self.queue = inw
-            if inw == 0:
+            except:
+                self.disconnect()
+                print("Port disconnected...")
                 return
 
-        except:
-            self.disconnect()
-            print("Port disconnected...")
-            return
+        self.queue = len(data)
+
+        lDataBuffer = self.parser.parse(data)
 
         if len(lDataBuffer) == 0:
             return

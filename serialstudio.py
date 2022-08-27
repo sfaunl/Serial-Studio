@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QStatusBar, QSplitter, QWidget, QHBoxLayout, QLabel
 )
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtCore import QTimer, QSize
+from PySide6.QtCore import Qt, QTimer, QSize
 
 import pyqtgraph as pg
 import pyqtgraph.parametertree as ptree
@@ -117,7 +117,6 @@ class SerialStudio(QMainWindow):
             dict(name='Endianness', type='list', limits={'LITTLE': 0, 'BIG': 1}, value=0),
             dict(name='Expected', type='str', value='', readonly=True),
         ]),
-        dict(name='channelopts', title='Channels', type='group'),
         dict(name='plotteropts', title='Plotter Options', type='group', children=[
             dict(name='Autoscale', type='bool', value=True, enabled=False),
             dict(name='Plot Length', type='int', limits=[0, None], step=1000, value=4096),
@@ -171,10 +170,13 @@ class SerialStudio(QMainWindow):
     def initUI(self):
         # Parameter tree object
         self.params = ptree.Parameter.create(name='Parameters', type='group', children=self.ptchildren)
+        self.channels = ptree.Parameter.create(name='Channels', type='group')
         paramtree = ptree.ParameterTree(showHeader=False)
         paramtree.setParameters(self.params)
+        channeltree = ptree.ParameterTree(showHeader=False)
+        channeltree.setParameters(self.channels)
 
-        self.params.child('channelopts').sigTreeStateChanged.connect(self.paramChannelChanged)
+        self.channels.sigTreeStateChanged.connect(self.paramChannelChanged)
         self.params.child('serialopts').sigTreeStateChanged.connect(self.paramSerialChanged)
         self.params.child('parseropts').sigTreeStateChanged.connect(self.paramParserChanged)
         self.params.child('plotteropts').sigTreeStateChanged.connect(self.paramPlotterChanged)
@@ -269,8 +271,13 @@ class SerialStudio(QMainWindow):
         self.statusBar().addPermanentWidget(statswidget)
 
         # place widgets in main window
+        vsplitter = QSplitter(Qt.Vertical)
+        vsplitter.addWidget(paramtree)
+        vsplitter.addWidget(channeltree)
+        channeltree.setMinimumHeight(100)
+
         splitter = QSplitter(self)
-        splitter.addWidget(paramtree)
+        splitter.addWidget(vsplitter)
         splitter.addWidget(self.glw)
 
         self.setCentralWidget(splitter)
@@ -372,7 +379,7 @@ class SerialStudio(QMainWindow):
     def paramChannelChanged(self):
         if self.debug:
             print("paramChannelChanged")
-        channelopts = self.params.child('channelopts')
+        channelopts = self.channels
         numchan = self.parameters['parser']['channel']
 
         # update active/inactive channels variable
@@ -430,7 +437,7 @@ class SerialStudio(QMainWindow):
         self.parameters['parser']['endianness'] = parseropts.child('Endianness').value()
 
         # add/remove channel entries in parameter tree
-        channelopts = self.params.child('channelopts')
+        channelopts = self.channels
         childcount = len(channelopts.children())
         with channelopts.treeChangeBlocker():
             for ch in range(max(numchan, childcount)):

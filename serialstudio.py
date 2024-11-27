@@ -497,12 +497,12 @@ class SerialStudio(QMainWindow):
                 self.plotter_t.removeItem(dataitems_t[ch])
                 self.plotter_f.removeItem(dataitems_f[ch])
             if ch >= numdataitems:
-                # color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+                # Color scheme from https://sashamaps.net/docs/resources/20-colors/
+                color = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
                 chname = self.parameters['channel_names']["Channel_{}".format(ch)]
-                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name=chname)
-                # plotData = pg.PlotDataItem(pen=color[ch], name="CH{}".format(ch))
+                plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
                 self.plotter_t.addItem(plotData)
-                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name=chname)
+                plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
                 self.plotter_f.addItem(plotData)
                 self.chdata.append([])
 

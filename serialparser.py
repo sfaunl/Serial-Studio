@@ -144,4 +144,4 @@ class SerialParser:
         return parsedPackets
 
 if __name__ == '__main__':
-    print("bye")
+    print("This is a library file, please import it to use.")

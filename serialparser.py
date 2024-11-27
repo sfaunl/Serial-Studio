@@ -15,6 +15,32 @@ class Endianness:
         lParserChar = ['<', '>']
         return lParserChar[aEndianness]
 
+class CheckSum:
+    NONE              = 0
+    CRC16_CRITT_FALSE = 1
+
+    def getSize(self, aCheckSum):
+        lCheckSumSize = [0, 2]
+        return lCheckSumSize[aCheckSum]
+
+    def getParserChar(self, aCheckSum):
+        lParserChar = ['B', 'H']
+        return lParserChar[aCheckSum]
+
+    def calculateCRC16_CRITT_FALSE(self, aData: bytearray) -> int:
+        poly = 0x1021
+        init = 0xFFFF
+        crc = init
+        for byte in aData:
+            crc ^= (byte << 8)  # Shift byte to align with the upper byte of crc
+            for _ in range(8):
+                if crc & 0x8000:  # Check the highest bit
+                    crc = (crc << 1) ^ poly
+                else:
+                    crc <<= 1
+                crc &= 0xFFFF  # Ensure crc is 16 bits
+        return crc
+
 class DataType:
     INT8    = 0
     UINT8   = 1
@@ -39,13 +65,14 @@ class SerialParser:
     def __init__(self, aStartSequence,
                  aDataType:DataType,
                  aNumChannel,
+                 aCheckSum:CheckSum,
                  aEndianness:Endianness = Endianness.LITTLE,
                  aEndSequence = [],
                  aEnableDebug = 0):
 
         self.buffer             = bytearray()
         self.debug              = aEnableDebug
-        self.setParserScheme(aStartSequence, aDataType, aNumChannel, aEndianness, aEndSequence)
+        self.setParserScheme(aStartSequence, aDataType, aNumChannel, aCheckSum, aEndianness, aEndSequence)
         self.packetRate         = 0
         self.packetCount        = 0
         self.startTime          = 0
@@ -55,6 +82,8 @@ class SerialParser:
     def setParserScheme(self, aStartSequence,
                         aDataType:DataType,
                         aNumChannel,
+                        aCheckSum:CheckSum = CheckSum.NONE,
+                        aEndianness:Endianness = Endianness.LITTLE,
                         aEndSequence = []):
 
         self.dataType           = aDataType
@@ -66,6 +95,8 @@ class SerialParser:
 
         self.payloadSize        = self.numChannels * DataType().getSize(self.dataType)
         self.headerSize         = len(self.startSequence)
+        self.checkSumSize       = CheckSum().getSize(self.checkSum)
+        self.packetSize         = self.headerSize + self.payloadSize + self.checkSumSize + len(self.endSequence)
 
         self.parserString       = Endianness().getParserChar(self.endianness)
         for i in range(self.numChannels):
@@ -118,6 +149,21 @@ class SerialParser:
             # found a valid packet
             byteRange = self.buffer[self.headerSize:self.headerSize + self.payloadSize]
             parsedValues = struct.unpack(self.parserString, byteRange)
+
+            # check checksum
+            if self.checkSum == CheckSum.CRC16_CRITT_FALSE:
+                lReceivedPacket = self.buffer[:self.packetSize]
+                lData = bytearray(lReceivedPacket[:self.headerSize + self.payloadSize])
+                lByteOrder = 'little' if self.endianness == Endianness.LITTLE else 'big'
+                lCrcInt = int.from_bytes(lReceivedPacket[-2:], byteorder=lByteOrder)
+                lCalculatedInt = CheckSum().calculateCRC16_CRITT_FALSE(lData)
+                if lCalculatedInt != lCrcInt:
+                    #print("Received data:", " ".join(f"0x{byte:02X}" for byte in lReceivedPacket))
+                    #print("CRC Error, got: {0:04X}, expected: {1:04X}".format(lCrcInt, lCalculatedInt))
+                    self.parserErrCount += 1
+                    self.buffer = self.buffer[self.packetSize:]
+                    continue
+
             parsedPackets.append(parsedValues)
 
             # remove parsed packet from buffer

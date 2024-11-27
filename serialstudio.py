@@ -72,6 +72,7 @@ class SerialStudio(QMainWindow):
             'startbyte': [0xAA, 0xBB],
             'endbyte': [],
             'channel': 3,
+            'checksum' : 0,
             'datatype': 4,
             'endianness': 0
         },
@@ -109,6 +110,7 @@ class SerialStudio(QMainWindow):
             dict(name='StartByte', type='str', value="AA BB"),
             dict(name='EndByte', type='str', value=""),
             dict(name='Channels', type='int', limits=[0, 24], value=3),
+            dict(name='CheckSum', type='list', limits={'CRC_NONE': 0, 'CRC16_CRITT_FALSE': 1}, value=0),
             dict(name='DataType', type='list', limits={'INT8': 0, 'UINT8': 1,
                                                        'INT16': 2, 'UINT16': 3,
                                                        'INT32': 4, 'UINT32': 5,
@@ -147,6 +149,7 @@ class SerialStudio(QMainWindow):
         # init parser
         self.parser = sp.SerialParser(aStartSequence=self.parameters['parser']['startbyte'],
                                       aEndSequence=self.parameters['parser']['endbyte'],
+                                      aCheckSum=self.parameters['parser']['checksum'],
                                       aDataType=self.parameters['parser']['datatype'],
                                       aNumChannel=self.parameters['parser']['channel'],
                                       aEndianness=self.parameters['parser']['endianness'])
@@ -368,6 +371,7 @@ class SerialStudio(QMainWindow):
                 hexstr += format(byte, 'X') + " "
             parseropts.child('EndByte').setValue(hexstr)
             parseropts.child('Channels').setValue(self.parameters['parser']['channel'])
+            parseropts.child('CheckSum').setValue(self.parameters['parser']['checksum'])
             parseropts.child('DataType').setValue(self.parameters['parser']['datatype'])
             parseropts.child('Endianness').setValue(self.parameters['parser']['endianness'])
 
@@ -441,6 +445,7 @@ class SerialStudio(QMainWindow):
         self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr))
         numchan = parseropts.child('Channels').value()
         self.parameters['parser']['channel'] = numchan
+        self.parameters['parser']['checksum'] = parseropts.child('CheckSum').value()
         self.parameters['parser']['datatype'] = parseropts.child('DataType').value()
         self.parameters['parser']['endianness'] = parseropts.child('Endianness').value()
 
@@ -476,6 +481,7 @@ class SerialStudio(QMainWindow):
         # set new parser config
         self.parser.setParserScheme(aStartSequence=self.parameters['parser']['startbyte'],
                                     aEndSequence=self.parameters['parser']['endbyte'],
+                                    aCheckSum=self.parameters['parser']['checksum'],
                                     aDataType=self.parameters['parser']['datatype'],
                                     aNumChannel=self.parameters['parser']['channel'],
                                     aEndianness=self.parameters['parser']['endianness'])

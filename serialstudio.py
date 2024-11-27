@@ -108,7 +108,7 @@ class SerialStudio(QMainWindow):
         dict(name='parseropts', title='Parser Options', type='group', children=[
             dict(name='StartByte', type='str', value="AA BB"),
             dict(name='EndByte', type='str', value=""),
-            dict(name='Channels', type='int', limits=[0, 10], value=3),
+            dict(name='Channels', type='int', limits=[0, 24], value=3),
             dict(name='DataType', type='list', limits={'INT8': 0, 'UINT8': 1,
                                                        'INT16': 2, 'UINT16': 3,
                                                        'INT32': 4, 'UINT32': 5,
@@ -458,10 +458,10 @@ class SerialStudio(QMainWindow):
                 self.plotter_f.removeItem(dataitems_f[ch])
             if ch >= numdataitems:
                 # color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=10), name="CH{}".format(ch))
+                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name="CH{}".format(ch))
                 # plotData = pg.PlotDataItem(pen=color[ch], name="CH{}".format(ch))
                 self.plotter_t.addItem(plotData)
-                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=10), name="CH{}".format(ch))
+                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name="CH{}".format(ch))
                 self.plotter_f.addItem(plotData)
                 self.chdata.append([])
 

@@ -92,7 +92,7 @@ class SerialStudio(QMainWindow):
         }
     }
 
-    ptchildren = [
+    source_children = [
         dict(name='connect', title='Connect', type='action', children=[
             dict(name='connected', title='Connected', type='str', value='', readonly=True, visible=False),
         ]),
@@ -117,6 +117,9 @@ class SerialStudio(QMainWindow):
             dict(name='Endianness', type='list', limits={'LITTLE': 0, 'BIG': 1}, value=0),
             dict(name='Expected', type='str', value='', readonly=True),
         ]),
+    ]
+
+    plotsettings_children = [
         dict(name='plotteropts', title='Plotter Options', type='group', children=[
             dict(name='Autoscale', type='bool', value=True, enabled=False),
             dict(name='Plot Length', type='int', limits=[0, None], step=1000, value=4096),
@@ -169,19 +172,22 @@ class SerialStudio(QMainWindow):
 
     def initUI(self):
         # Parameter tree object
-        self.params = ptree.Parameter.create(name='Parameters', type='group', children=self.ptchildren)
+        self.sources = ptree.Parameter.create(name='Source', type='group', children=self.source_children)
+        self.settings = ptree.Parameter.create(name='Settings', type='group', children=self.plotsettings_children)
         self.channels = ptree.Parameter.create(name='Channels', type='group')
-        paramtree = ptree.ParameterTree(showHeader=False)
-        paramtree.setParameters(self.params)
+        sourcetree = ptree.ParameterTree(showHeader=False)
+        sourcetree.setParameters(self.sources)
+        settingstree = ptree.ParameterTree(showHeader=False)
+        settingstree.setParameters(self.settings)
         channeltree = ptree.ParameterTree(showHeader=False)
         channeltree.setParameters(self.channels)
 
         self.channels.sigTreeStateChanged.connect(self.paramChannelChanged)
-        self.params.child('serialopts').sigTreeStateChanged.connect(self.paramSerialChanged)
-        self.params.child('parseropts').sigTreeStateChanged.connect(self.paramParserChanged)
-        self.params.child('plotteropts').sigTreeStateChanged.connect(self.paramPlotterChanged)
-        self.params.child('fftopts').sigTreeStateChanged.connect(self.paramFftChanged)
-        self.params.child('connect').sigActivated.connect(self.serial_connect)
+        self.sources.child('serialopts').sigTreeStateChanged.connect(self.paramSerialChanged)
+        self.sources.child('parseropts').sigTreeStateChanged.connect(self.paramParserChanged)
+        self.settings.child('plotteropts').sigTreeStateChanged.connect(self.paramPlotterChanged)
+        self.settings.child('fftopts').sigTreeStateChanged.connect(self.paramFftChanged)
+        self.sources.child('connect').sigActivated.connect(self.serial_connect)
 
         # plotter object
         self.glw = pg.GraphicsLayoutWidget()
@@ -272,8 +278,10 @@ class SerialStudio(QMainWindow):
 
         # place widgets in main window
         vsplitter = QSplitter(Qt.Vertical)
-        vsplitter.addWidget(paramtree)
+        vsplitter.addWidget(sourcetree)
+        vsplitter.addWidget(settingstree)
         vsplitter.addWidget(channeltree)
+        settingstree.setMinimumHeight(120)
         channeltree.setMinimumHeight(120)
 
         splitter = QSplitter(self)
@@ -308,7 +316,7 @@ class SerialStudio(QMainWindow):
             msg = "Error saving config file"
             self.statusBar().showMessage(msg)
             print(msg)
-        
+
     def loadconfig(self):
         params = self.config.loadConfig()
         if params:
@@ -332,10 +340,10 @@ class SerialStudio(QMainWindow):
         print(msg)
 
     def loadParameters(self):
-        seropts = self.params.child('serialopts')
-        parseropts = self.params.child('parseropts')
-        plotteropts = self.params.child('plotteropts')
-        fftopts = self.params.child('fftopts')
+        seropts = self.sources.child('serialopts')
+        parseropts = self.sources.child('parseropts')
+        plotteropts = self.settings.child('plotteropts')
+        fftopts = self.settings.child('fftopts')
 
         #seropts
         with seropts.treeChangeBlocker():
@@ -398,7 +406,7 @@ class SerialStudio(QMainWindow):
     def paramSerialChanged(self):
         if self.debug:
             print("paramSerialChanged")
-        seropts = self.params.child('serialopts')
+        seropts = self.sources.child('serialopts')
         customport = seropts['Custom Port']
 
         with seropts.treeChangeBlocker():
@@ -426,7 +434,7 @@ class SerialStudio(QMainWindow):
     def paramParserChanged(self):
         if self.debug:
             print("paramParserChanged")
-        parseropts = self.params.child('parseropts')
+        parseropts = self.sources.child('parseropts')
         startByteStr = parseropts.child('StartByte').value()
         self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr))
         endByteStr = parseropts.child('EndByte').value()
@@ -478,7 +486,7 @@ class SerialStudio(QMainWindow):
     def paramPlotterChanged(self):
         if self.debug:
             print("paramPlotterChanged")
-        plotteropts = self.params.child('plotteropts')
+        plotteropts = self.settings.child('plotteropts')
         self.parameters['plotter']['autoscale'] = plotteropts.child('Autoscale').value()
         self.parameters['plotter']['buffersize'] = plotteropts.child('Plot Length').value()
         self.parameters['plotter']['offset'] = plotteropts.child('Offset').value()
@@ -488,7 +496,7 @@ class SerialStudio(QMainWindow):
     def paramFftChanged(self):
         if self.debug:
             print("paramFftChanged")
-        fftopts = self.params.child('fftopts')
+        fftopts = self.settings.child('fftopts')
         self.parameters['fft']['autoscale'] = fftopts.child('Autoscale').value()
         self.parameters['fft']['showdc'] = fftopts.child('Show DC').value()
         self.parameters['fft']['fftsize'] = fftopts.child('NSamples').value()
@@ -516,13 +524,13 @@ class SerialStudio(QMainWindow):
         self.statusBar().showMessage(msg)
         print(msg)
 
-        gconnect = self.params.child('connect')
+        gconnect = self.sources.child('connect')
         connectedstr = "{} :{}".format(portname, baudrate)
         gconnect.child('connected').setOpts(visible=True, value=connectedstr)
         gconnect.setOpts(title="Disconnect")
         gconnect.sigActivated.disconnect(self.serial_connect)
         gconnect.sigActivated.connect(self.serial_disconnect)
-        self.params.child('serialopts').hide()
+        self.sources.child('serialopts').hide()
         print(self.ser)
 
     def serial_disconnect(self):
@@ -531,12 +539,12 @@ class SerialStudio(QMainWindow):
         self.ser.close()
 
         if self.ser.is_open == False:
-            gconnect = self.params.child('connect')
+            gconnect = self.sources.child('connect')
             gconnect.setOpts(title="Connect")
             gconnect.sigActivated.disconnect(self.serial_disconnect)
             gconnect.sigActivated.connect(self.serial_connect)
-            self.params.child('serialopts').show()
-            self.params.child('connect').child('connected').setOpts(visible=False)
+            self.sources.child('serialopts').show()
+            self.sources.child('connect').child('connected').setOpts(visible=False)
 
             msg = "Disconnected"
             self.statusBar().showMessage(msg)

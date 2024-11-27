@@ -13,6 +13,7 @@ Created on Sat Apr 23 02:08:23 2022
 @since		v0.2.2 : add plot screenshot functionality (thanks to 220523)
 @since		v0.2.3 : migrate from pyqt to pyside
 @since      v0.2.4 : add crc and channel name support
+@since      v0.2.5 : use new color palette
 """
 
 from PySide6.QtWidgets import (
@@ -59,7 +60,7 @@ class ConfigParser():
 
 class SerialStudio(QMainWindow):
     appname = "Serial Studio"
-    version = "0.2.4"
+    version = "0.2.5"
 
     parameters = {
         'conn': {

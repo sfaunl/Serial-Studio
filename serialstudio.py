@@ -90,6 +90,32 @@ class SerialStudio(QMainWindow):
             'autoscale': True,
             'showdc': False,
             'fftsize': 1024
+        },
+        'channel_names': {
+            'Channel_0': 'CH0',
+            'Channel_1': 'CH1',
+            'Channel_2': 'CH2',
+            'Channel_3': 'CH3',
+            'Channel_4': 'CH4',
+            'Channel_5': 'CH5',
+            'Channel_6': 'CH6',
+            'Channel_7': 'CH7',
+            'Channel_8': 'CH8',
+            'Channel_9': 'CH9',
+            'Channel_10': 'CH10',
+            'Channel_11': 'CH11',
+            'Channel_12': 'CH12',
+            'Channel_13': 'CH13',
+            'Channel_14': 'CH14',
+            'Channel_15': 'CH15',
+            'Channel_16': 'CH16',
+            'Channel_17': 'CH17',
+            'Channel_18': 'CH18',
+            'Channel_19': 'CH19',
+            'Channel_20': 'CH20',
+            'Channel_21': 'CH21',
+            'Channel_22': 'CH22',
+            'Channel_23': 'CH23'
         }
     }
 
@@ -398,7 +424,7 @@ class SerialStudio(QMainWindow):
         activechs = []
         inactivechs = []
         for ch in range(numchan):
-            chname = "CH{}".format(ch)
+            chname = self.parameters['channel_names']["Channel_{}".format(ch)]
             childval = channelopts.child(chname).value()
             if childval == True:
                 activechs.append(ch)
@@ -454,12 +480,12 @@ class SerialStudio(QMainWindow):
         childcount = len(channelopts.children())
         with channelopts.treeChangeBlocker():
             for ch in range(max(numchan, childcount)):
+                chname = self.parameters['channel_names']["Channel_{}".format(ch)]
                 if ch >= numchan:
                     channelopts.removeChild(
-                        channelopts.child("CH{}".format(ch)))
+                        channelopts.child(chname))
                 elif ch >= childcount:
-                    name = "CH{}".format(ch)
-                    channelopts.addChild({'name': name, 'type': 'bool', 'value': True})
+                    channelopts.addChild({'name': chname, 'type': 'bool', 'value': True})
 
         dataitems_t = self.plotter_t.listDataItems()
         dataitems_f = self.plotter_f.listDataItems()
@@ -471,10 +497,11 @@ class SerialStudio(QMainWindow):
                 self.plotter_f.removeItem(dataitems_f[ch])
             if ch >= numdataitems:
                 # color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name="CH{}".format(ch))
+                chname = self.parameters['channel_names']["Channel_{}".format(ch)]
+                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name=chname)
                 # plotData = pg.PlotDataItem(pen=color[ch], name="CH{}".format(ch))
                 self.plotter_t.addItem(plotData)
-                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name="CH{}".format(ch))
+                plotData = pg.PlotDataItem(pen=pg.intColor(ch, hues=24), name=chname)
                 self.plotter_f.addItem(plotData)
                 self.chdata.append([])
 

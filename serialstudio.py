@@ -436,9 +436,8 @@ class SerialStudio(QMainWindow):
         activechs = []
         inactivechs = []
         for ch in range(numchan):
-            chname = self.parameters['channel_names']["Channel_{}".format(ch)]
-            childval = channelopts.child(chname).value()
-            if childval == True:
+            isactive = channelopts.child("Channel_{}".format(ch)).value()
+            if isactive == True:
                 activechs.append(ch)
             else:
                 inactivechs.append(ch)

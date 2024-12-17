@@ -748,9 +748,12 @@ class SerialStudio(QMainWindow):
     def update_ui(self):
         if self.parser == None:
             return
+
         self.labelpacketrate.setText("%d pps" % self.parser.getPacketRate())
         self.labelerrorrate.setText("%d pps" % self.parser.getErrorRate())
         self.labelpacketqueue.setText("Queue: %d pps" % self.queue)
+
+        # Update channel value
         if self.dataBuffer is not None:
             for i in range(self.parser.numChannels):
                 if len(self.dataBuffer) <= i:

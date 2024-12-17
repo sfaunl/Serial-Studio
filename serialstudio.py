@@ -468,10 +468,10 @@ class SerialStudio(QMainWindow):
     def paramSerialChanged(self):
         if self.debug:
             print("paramSerialChanged")
-        seropts = self.sources.child('serialopts')
-        customport = seropts['Custom Port']
 
+        seropts = self.sources.child('serialopts')
         with seropts.treeChangeBlocker():
+            customport = seropts['Custom Port']
             if customport == True:
                 seropts.child('PortStr').setOpts(visible=True)
                 seropts.child('PortList').setOpts(visible=False)
@@ -488,76 +488,78 @@ class SerialStudio(QMainWindow):
                 seropts.child('PortList').setOpts(limits=ports)
                 self.parameters['conn']['portname'] = seropts.child('PortList').value()
 
-        self.parameters['conn']['baudrate'] = seropts.child('BaudRate').value()
-        self.parameters['conn']['databits'] = seropts.child('Data Bits').value()
-        self.parameters['conn']['stopbits'] = seropts.child('Stop Bits').value()
-        self.parameters['conn']['parity'] = seropts.child('Parity').value()
+            self.parameters['conn']['baudrate'] = seropts.child('BaudRate').value()
+            self.parameters['conn']['databits'] = seropts.child('Data Bits').value()
+            self.parameters['conn']['stopbits'] = seropts.child('Stop Bits').value()
+            self.parameters['conn']['parity'] = seropts.child('Parity').value()
 
     def paramParserChanged(self):
         if self.debug:
             print("paramParserChanged")
 
         parseropts = self.sources.child('parseropts')
-        self.parameters['parser']['encoding'] = parseropts.child('Encoding').value()
-        startByteStr = parseropts.child('StartByte').value()
-        self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr.replace(" ", "")))
-        self.parameters['parser']['discardbytes'] = parseropts.child('DiscardBytes').value()
-        endByteStr = parseropts.child('EndByte').value()
-        self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr.replace(" ", "")))
-        numchan = parseropts.child('Channels').value()
-        self.parameters['parser']['channel'] = numchan
-        self.parameters['parser']['checksum'] = parseropts.child('CheckSum').value()
-        self.parameters['parser']['datatype'] = parseropts.child('DataType').value()
-        self.parameters['parser']['endianness'] = parseropts.child('Endianness').value()
+        with parseropts.treeChangeBlocker():
+            self.parameters['parser']['encoding'] = parseropts.child('Encoding').value()
+            startByteStr = parseropts.child('StartByte').value()
+            self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr.replace(" ", "")))
+            self.parameters['parser']['discardbytes'] = parseropts.child('DiscardBytes').value()
+            endByteStr = parseropts.child('EndByte').value()
+            self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr.replace(" ", "")))
+            numchan = parseropts.child('Channels').value()
+            self.parameters['parser']['channel'] = numchan
+            self.parameters['parser']['checksum'] = parseropts.child('CheckSum').value()
+            self.parameters['parser']['datatype'] = parseropts.child('DataType').value()
+            self.parameters['parser']['endianness'] = parseropts.child('Endianness').value()
 
-        # add/remove channel entries in parameter tree
-        channelopts = self.channels
-        childcount = len(channelopts.children())
-        with channelopts.treeChangeBlocker():
-            colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
-            for ch in range(max(numchan, childcount)):
-                chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
+            # add/remove channel entries in parameter tree
+            channelopts = self.channels
+            with channelopts.treeChangeBlocker():
+                childcount = len(channelopts.children())
+                with channelopts.treeChangeBlocker():
+                    colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
+                    for ch in range(max(numchan, childcount)):
+                        chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
+                        if ch >= numchan:
+                            try:
+                                channelopts.removeChild(channelopts.child(chtitle))
+                            except:
+                                pass
+                        elif ch >= childcount:
+                            child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
+                            chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
+                            child.addChild({'name': 'Color', 'type': 'color', 'value': colorPalette[ch % len(colorPalette)]})
+                            child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
+
+            dataitems_t = self.plotter_t.listDataItems()
+            dataitems_f = self.plotter_f.listDataItems()
+            numdataitems = len(dataitems_t)
+
+            for ch in range(max(numchan, numdataitems)):
                 if ch >= numchan:
-                    try:
-                        channelopts.removeChild(channelopts.child(chtitle))
-                    except:
-                        pass
-                elif ch >= childcount:
-                    child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
-                    chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
-                    child.addChild({'name': 'Color', 'type': 'color', 'value': colorPalette[ch % len(colorPalette)]})
-                    child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
+                    self.plotter_t.removeItem(dataitems_t[ch])
+                    self.plotter_f.removeItem(dataitems_f[ch])
+                if ch >= numdataitems:
+                    # Color scheme from https://sashamaps.net/docs/resources/20-colors/
+                    color = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
+                    chname = self.parameters['channel_names']["Channel_{}".format(ch)]
+                    plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
+                    self.plotter_t.addItem(plotData)
+                    plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
+                    self.plotter_f.addItem(plotData)
+                    self.chdata.append([])
 
-        dataitems_t = self.plotter_t.listDataItems()
-        dataitems_f = self.plotter_f.listDataItems()
-        numdataitems = len(dataitems_t)
+            # set new parser config
+            self.parser.setParserScheme(aEncoding=self.parameters['parser']['encoding'],
+                                        aStartSequence=self.parameters['parser']['startbyte'],
+                                        aDiscardBytes=self.parameters['parser']['discardbytes'],
+                                        aEndSequence=self.parameters['parser']['endbyte'],
+                                        aCheckSum=self.parameters['parser']['checksum'],
+                                        aDataType=self.parameters['parser']['datatype'],
+                                        aNumChannel=self.parameters['parser']['channel'],
+                                        aEndianness=self.parameters['parser']['endianness'])
 
-        for ch in range(max(numchan, numdataitems)):
-            if ch >= numchan:
-                self.plotter_t.removeItem(dataitems_t[ch])
-                self.plotter_f.removeItem(dataitems_f[ch])
-            if ch >= numdataitems:
-                # Color scheme from https://sashamaps.net/docs/resources/20-colors/
-                color = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
-                chname = self.parameters['channel_names']["Channel_{}".format(ch)]
-                plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
-                self.plotter_t.addItem(plotData)
-                plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
-                self.plotter_f.addItem(plotData)
-                self.chdata.append([])
-
-        # set new parser config
-        self.parser.setParserScheme(aEncoding=self.parameters['parser']['encoding'],
-                                    aStartSequence=self.parameters['parser']['startbyte'],
-                                    aDiscardBytes=self.parameters['parser']['discardbytes'],
-                                    aEndSequence=self.parameters['parser']['endbyte'],
-                                    aCheckSum=self.parameters['parser']['checksum'],
-                                    aDataType=self.parameters['parser']['datatype'],
-                                    aNumChannel=self.parameters['parser']['channel'],
-                                    aEndianness=self.parameters['parser']['endianness'])
-
-        expectedStr = self.parser.getExpected()
-        parseropts.child('Expected').setValue(expectedStr)
+            expectedStr = self.parser.getExpected()
+            parseropts.child('Expected').setValue(expectedStr)
 
     def paramPlotterChanged(self):
         if self.debug:

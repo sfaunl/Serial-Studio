@@ -712,9 +712,6 @@ class SerialStudio(QMainWindow):
         tstart = - min(self.parameters['plotter']['buffersize'] + 1, len(self.chdata[0]))
         tend = -1
 
-        for i, ch in enumerate(inactivechs):
-            if len(dataItems_t) > i:
-                dataItems_t[i].clear()
         for i, ch in enumerate(activechs):
             if i >= len(dataItems_t):
                 continue
@@ -740,9 +737,7 @@ class SerialStudio(QMainWindow):
             fend = (lfNSamples // 2) - 1
 
             dataItems_f = self.plotter_f.listDataItems()
-            for i, ch in enumerate(inactivechs):
-                if len(dataItems_t) > i:
-                    dataItems_f[i].clear()
+
             for i, ch in enumerate(activechs):
                 if i >= len(dataItems_f):
                     continue

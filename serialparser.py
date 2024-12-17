@@ -179,7 +179,7 @@ class SerialParser:
         parsedPackets = []
         self.serialBuffer.extend(data)
 
-        while len(self.serialBuffer) >= self.packetSize + Encoding().getMinOverhead(self.encoding, self.packetSize):
+        while len(self.serialBuffer) >= self.encodedSize:
             # decode
             if self.encoding == Encoding.COBS:
                 # remove all trailing 0x00 from the buffer
@@ -188,13 +188,20 @@ class SerialParser:
                     if val == 0x00:
                         break
                 # get the data till the first 0x00
-                self.packetBuffer = self.serialBuffer[:i]
+                cobsBuffer = self.serialBuffer[:i]
                 # delete the data from the buffer
                 self.serialBuffer = self.serialBuffer[i+1:]
 
+                if len(cobsBuffer) < self.packetSize:
+                    break
                 #print(" ".join(format(x, '02X') for x in self.packetBuffer))
 
-                self.packetBuffer = bytearray(cobs.decode(self.packetBuffer))
+                try:
+                    self.packetBuffer = bytearray(cobs.decode(cobsBuffer))
+                except cobs.DecodeError:
+                    print ("COBS decode error at: ", cobsBuffer)
+                    self.serialBuffer = self.serialBuffer[1:]
+                    continue
                 #print(" ".join(format(x, '02X') for x in self.packetBuffer))
 
             if len(self.packetBuffer) < self.packetSize:

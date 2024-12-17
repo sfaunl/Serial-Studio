@@ -397,14 +397,14 @@ class SerialStudio(QMainWindow):
             startbytelist = self.parameters['parser']['startbyte']
             hexstr = ""
             for byte in startbytelist:
-                hexstr += format(byte, 'X') + " "
+                hexstr += format(byte, '02X') + " "
             parseropts.child('StartByte').setValue(hexstr)
             parseropts.child('DiscardBytes').setValue(self.parameters['parser']['discardbytes'])
 
             endbytelist = self.parameters['parser']['endbyte']
             hexstr = ""
             for byte in endbytelist:
-                hexstr += format(byte, 'X') + " "
+                hexstr += format(byte, '02X') + " "
             parseropts.child('EndByte').setValue(hexstr)
             parseropts.child('Channels').setValue(self.parameters['parser']['channel'])
             parseropts.child('CheckSum').setValue(self.parameters['parser']['checksum'])
@@ -477,10 +477,10 @@ class SerialStudio(QMainWindow):
         parseropts = self.sources.child('parseropts')
         self.parameters['parser']['encoding'] = parseropts.child('Encoding').value()
         startByteStr = parseropts.child('StartByte').value()
-        self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr))
+        self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr.replace(" ", "")))
         self.parameters['parser']['discardbytes'] = parseropts.child('DiscardBytes').value()
         endByteStr = parseropts.child('EndByte').value()
-        self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr))
+        self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr.replace(" ", "")))
         numchan = parseropts.child('Channels').value()
         self.parameters['parser']['channel'] = numchan
         self.parameters['parser']['checksum'] = parseropts.child('CheckSum').value()

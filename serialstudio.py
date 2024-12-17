@@ -466,6 +466,13 @@ class SerialStudio(QMainWindow):
                     # Update inactive channels
                     inactivechs.append(ch)
 
+            if len(activechs) == 0:
+                self.channels.child("Select All").setOpts(visible=True)
+                self.channels.child("Deselect All").setOpts(visible=False)
+            else:
+                self.channels.child("Select All").setOpts(visible=False)
+                self.channels.child("Deselect All").setOpts(visible=True)
+
             self.parameters['channels']['activechs'] = activechs
             self.parameters['channels']['inactivechs'] = inactivechs
 
@@ -497,6 +504,14 @@ class SerialStudio(QMainWindow):
             self.parameters['conn']['stopbits'] = seropts.child('Stop Bits').value()
             self.parameters['conn']['parity'] = seropts.child('Parity').value()
 
+    def deselectAll(self):
+        for ch in range(self.parameters['parser']['channel']):
+            self.channels.child("Channel_{}".format(ch)).setValue(False)
+
+    def selectAll(self):
+        for ch in range(self.parameters['parser']['channel']):
+            self.channels.child("Channel_{}".format(ch)).setValue(True)
+
     def paramParserChanged(self):
         if self.debug:
             print("paramParserChanged")
@@ -519,6 +534,12 @@ class SerialStudio(QMainWindow):
             channelopts = self.channels
             with channelopts.treeChangeBlocker():
                 childcount = len(channelopts.children())
+                if childcount == 0:
+                    buttonDeselectAll = channelopts.addChild({'name': "Deselect All", 'type': 'action', 'visible': True})
+                    buttonDeselectAll.sigActivated.connect(self.deselectAll)
+                    buttonSelectAll = channelopts.addChild({'name': "Select All", 'type': 'action', 'visible': False})
+                    buttonSelectAll.sigActivated.connect(self.selectAll)
+
                 colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
                 for ch in range(max(numchan, childcount)):
                     chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]

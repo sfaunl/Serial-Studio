@@ -669,8 +669,18 @@ class SerialStudio(QMainWindow):
         for ch in inactivechs:
             dataItems_t[ch].clear()
         for ch in activechs:
-            dataItems_t[ch].setData(
-                self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
+            if ch >= len(dataItems_t):
+                continue
+
+            # prepend zeros if the data is shorter than the plot length
+            lenChData = len(self.chdata[ch][tstart:tend])
+            lenXt = len(self.Xt[0:-tstart-1])
+            if lenChData != lenXt:
+                numZeros = lenXt - lenChData
+                self.chdata[ch][tstart:tend] = [0] * numZeros + self.chdata[ch][tstart:tend]
+
+            # update plot data
+            dataItems_t[ch].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
         # draw frequency domain plot
         lfNSamples = self.parameters['fft']['fftsize']
@@ -685,6 +695,8 @@ class SerialStudio(QMainWindow):
             for ch in inactivechs:
                 dataItems_f[ch].clear()
             for ch in activechs:
+                if ch >= len(dataItems_f):
+                    continue
                 self.Yf = fft(self.chdata[ch][tstart:tend])
                 dataItems_f[ch].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
 

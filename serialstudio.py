@@ -519,21 +519,19 @@ class SerialStudio(QMainWindow):
             channelopts = self.channels
             with channelopts.treeChangeBlocker():
                 childcount = len(channelopts.children())
-                with channelopts.treeChangeBlocker():
-                    colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
-                    for ch in range(max(numchan, childcount)):
-                        chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
-                        if ch >= numchan:
-                            try:
-                                channelopts.removeChild(channelopts.child(chtitle))
-                            except:
-                                pass
-                        elif ch >= childcount:
-                            child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
-                            chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
-                            child.addChild({'name': 'Color', 'type': 'color', 'value': colorPalette[ch % len(colorPalette)]})
-                            child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
-
+                colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
+                for ch in range(max(numchan, childcount)):
+                    chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
+                    if ch >= numchan:
+                        try:
+                            channelopts.removeChild(channelopts.child(chtitle))
+                        except:
+                            pass
+                    elif ch >= childcount:
+                        child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
+                        chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
+                        child.addChild({'name': 'Color', 'type': 'color', 'value': colorPalette[ch % len(colorPalette)]})
+                        child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
             dataitems_t = self.plotter_t.listDataItems()
             dataitems_f = self.plotter_f.listDataItems()
             numdataitems = len(dataitems_t)

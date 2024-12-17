@@ -6,6 +6,8 @@ Created on Sat Apr 23 02:02:34 2022
 """
 import struct
 import time
+import math
+from cobs import cobs
 
 class Endianness:
     LITTLE  = 0
@@ -14,6 +16,51 @@ class Endianness:
     def getParserChar(self, aEndianness):
         lParserChar = ['<', '>']
         return lParserChar[aEndianness]
+
+class Encoding:
+    NONE = 0
+    COBS = 1
+
+    def getMinOverhead(self, aEncoding, dataSize):
+        lEncodingSize = [0, 1/254]
+        minOverhead = lEncodingSize[aEncoding] * dataSize
+        return math.ceil(minOverhead) + 1
+
+    def decodeCOBS(self, aData: bytearray, customDelimiter: int) -> bytearray:
+        """
+        Decodes COBS-encoded data with a custom delimiter.
+
+        :param aData: The COBS-encoded bytearray data.
+        :param customDelimiter: The custom delimiter (replaces the default 0x00).
+        :return: Decoded bytearray.
+        """
+        if not isinstance(aData, bytearray):
+            raise TypeError("Input data must be a bytearray.")
+        if not (0 <= customDelimiter <= 255):
+            raise ValueError("Custom delimiter must be between 0 and 255.")
+
+        decoded = bytearray()
+        index = 0
+
+        while index < len(aData):
+            code = aData[index]  # Length code (distance to next 0 or customDelimiter)
+            index += 1
+
+            if code == 0 or code > 255:
+                raise ValueError("Invalid COBS code encountered.")
+
+            # Decode the next (code - 1) bytes
+            for i in range(code - 1):
+                if index >= len(aData):
+                    raise ValueError("Malformed COBS data: unexpected end of input.")
+                decoded.append(aData[index])
+                index += 1
+
+            # Add a delimiter (0x00 or custom delimiter) unless the code is 255
+            if code < 0xFF and index < len(aData):
+                decoded.append(customDelimiter)
+
+        return decoded
 
 class CheckSum:
     NONE              = 0
@@ -62,7 +109,9 @@ class DataType:
         return lParserChar[aDataType]
 
 class SerialParser:
-    def __init__(self, aStartSequence,
+    def __init__(self,
+                 aEncoding,
+                 aStartSequence,
                  aDataType:DataType,
                  aNumChannel,
                  aCheckSum:CheckSum,
@@ -70,16 +119,19 @@ class SerialParser:
                  aEndSequence = [],
                  aEnableDebug = 0):
 
-        self.buffer             = bytearray()
+        self.packetBuffer       = bytearray()
+        self.serialBuffer       = bytearray()
         self.debug              = aEnableDebug
-        self.setParserScheme(aStartSequence, aDataType, aNumChannel, aCheckSum, aEndianness, aEndSequence)
+        self.setParserScheme(aEncoding, aStartSequence, aDataType, aNumChannel, aCheckSum, aEndianness, aEndSequence)
         self.packetRate         = 0
         self.packetCount        = 0
         self.startTime          = 0
         self.parserErrCount     = 0
         self.parserErrRate      = 0
 
-    def setParserScheme(self, aStartSequence,
+    def setParserScheme(self,
+                        aEncoding,
+                        aStartSequence,
                         aDataType:DataType,
                         aNumChannel,
                         aCheckSum:CheckSum = CheckSum.NONE,
@@ -88,6 +140,7 @@ class SerialParser:
 
         self.dataType           = aDataType
         self.numChannels        = aNumChannel
+        self.encoding           = aEncoding
         self.startSequence      = aStartSequence
         self.checkSum           = aCheckSum
         self.endSequence        = aEndSequence
@@ -97,6 +150,7 @@ class SerialParser:
         self.headerSize         = len(self.startSequence)
         self.checkSumSize       = CheckSum().getSize(self.checkSum)
         self.packetSize         = self.headerSize + self.payloadSize + self.checkSumSize + len(self.endSequence)
+        self.encodedSize        = self.packetSize + Encoding().getMinOverhead(self.encoding, self.packetSize)
 
         self.parserString       = Endianness().getParserChar(self.endianness)
         for i in range(self.numChannels):
@@ -118,41 +172,58 @@ class SerialParser:
 
     def parse(self, data):
         parsedPackets = []
-        self.buffer.extend(data)
+        self.serialBuffer.extend(data)
 
-        while len(self.buffer) >= self.packetSize:
+        while len(self.serialBuffer) >= self.packetSize + Encoding().getMinOverhead(self.encoding, self.packetSize):
+            # decode
+            if self.encoding == Encoding.COBS:
+                # remove all trailing 0x00 from the buffer
+                # find the first 0x00
+                for i, val in enumerate(self.serialBuffer):
+                    if val == 0x00:
+                        break
+                # get the data till the first 0x00
+                self.packetBuffer = self.serialBuffer[:i]
+                # delete the data from the buffer
+                self.serialBuffer = self.serialBuffer[i+1:]
+
+                #print(" ".join(format(x, '02X') for x in self.packetBuffer))
+
+                self.packetBuffer = bytearray(cobs.decode(self.packetBuffer))
+                #print(" ".join(format(x, '02X') for x in self.packetBuffer))
+
             lNotFound = 0
             # search for start sequence
             for i, val in enumerate(self.startSequence):
-                if self.buffer[i] != val :
+                if self.packetBuffer[i] != val :
                     lNotFound = 1
                     break
 
             if lNotFound:
                 # remove a byte and search again
-                self.buffer.pop(0)
+                self.packetBuffer.pop(0)
                 self.parserErrCount += 1
                 continue
 
             # search for end sequence
             for i, val in enumerate(self.endSequence):
-                if self.buffer[i + self.headerSize + self.payloadSize + self.checkSumSize] != val:
+                if self.packetBuffer[i + self.headerSize + self.payloadSize + self.checkSumSize] != val:
                     lNotFound = 1
                     break
 
             if lNotFound:
                 # remove a byte and search again
-                self.buffer.pop(0)
+                self.packetBuffer.pop(0)
                 self.parserErrCount += 1
                 continue
 
             # found a valid packet
-            byteRange = self.buffer[self.headerSize:self.headerSize + self.payloadSize]
+            byteRange = self.packetBuffer[self.headerSize:self.headerSize + self.payloadSize]
             parsedValues = struct.unpack(self.parserString, byteRange)
 
             # check checksum
             if self.checkSum == CheckSum.CRC16_CRITT_FALSE:
-                lReceivedPacket = self.buffer[:self.packetSize]
+                lReceivedPacket = self.packetBuffer[:self.packetSize]
                 lData = bytearray(lReceivedPacket[:self.headerSize + self.payloadSize])
                 lByteOrder = 'little' if self.endianness == Endianness.LITTLE else 'big'
                 lCrcInt = int.from_bytes(lReceivedPacket[-2:], byteorder=lByteOrder)
@@ -161,13 +232,13 @@ class SerialParser:
                     #print("Received data:", " ".join(f"0x{byte:02X}" for byte in lReceivedPacket))
                     #print("CRC Error, got: {0:04X}, expected: {1:04X}".format(lCrcInt, lCalculatedInt))
                     self.parserErrCount += 1
-                    self.buffer = self.buffer[self.packetSize:]
+                    self.packetBuffer = self.packetBuffer[self.packetSize:]
                     continue
 
             parsedPackets.append(parsedValues)
 
-            # remove parsed packet from buffer
-            self.buffer = self.buffer[self.packetSize:]
+            # remove parsed packet from packetBuffer
+            self.packetBuffer = self.packetBuffer[self.packetSize:]
 
         # calculate incoming packet/error rate
         self.packetCount += len(parsedPackets)

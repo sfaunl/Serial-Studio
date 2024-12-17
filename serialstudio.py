@@ -172,6 +172,7 @@ class SerialStudio(QMainWindow):
         self.debug = debug
         self.ser = None
         self.queue = 0
+        self.dataBuffer = None
         self.chdata = []
 
         self.defaultParams = self.parameters
@@ -212,6 +213,7 @@ class SerialStudio(QMainWindow):
         self.sources = ptree.Parameter.create(name='Source', type='group', children=self.source_children)
         self.settings = ptree.Parameter.create(name='Settings', type='group', children=self.plotsettings_children)
         self.channels = ptree.Parameter.create(name='Channels', type='group')
+
         sourcetree = ptree.ParameterTree(showHeader=False)
         sourcetree.setParameters(self.sources)
         settingstree = ptree.ParameterTree(showHeader=False)
@@ -474,6 +476,7 @@ class SerialStudio(QMainWindow):
     def paramParserChanged(self):
         if self.debug:
             print("paramParserChanged")
+
         parseropts = self.sources.child('parseropts')
         self.parameters['parser']['encoding'] = parseropts.child('Encoding').value()
         startByteStr = parseropts.child('StartByte').value()
@@ -491,13 +494,17 @@ class SerialStudio(QMainWindow):
         channelopts = self.channels
         childcount = len(channelopts.children())
         with channelopts.treeChangeBlocker():
+            colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
             for ch in range(max(numchan, childcount)):
-                chname = self.parameters['channel_names']["Channel_{}".format(ch)]
+                chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
                 if ch >= numchan:
                     channelopts.removeChild(
-                        channelopts.child(chname))
+                        channelopts.child(chtitle))
                 elif ch >= childcount:
-                    channelopts.addChild({'name': chname, 'type': 'bool', 'value': True})
+                    child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
+                    chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
+                    child.addChild({'name': 'Color', 'type': 'color', 'value': colorPalette[ch % len(colorPalette)]})
+                    child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
 
         dataitems_t = self.plotter_t.listDataItems()
         dataitems_f = self.plotter_f.listDataItems()
@@ -629,25 +636,25 @@ class SerialStudio(QMainWindow):
 
         self.queue = len(data)
 
-        lDataBuffer = self.parser.parse(data)
+        self.dataBuffer = self.parser.parse(data)
 
-        if len(lDataBuffer) == 0:
+        if len(self.dataBuffer) == 0:
             return
 
-        if len(lDataBuffer[0]) == 0:
+        if len(self.dataBuffer[0]) == 0:
             return
 
         multiplier = self.parameters['plotter']['multiplier']
         offset = self.parameters['plotter']['offset']
-        for i, ch in enumerate(lDataBuffer):
+        for i, ch in enumerate(self.dataBuffer):
             for j, data in enumerate(ch):
                 data *= multiplier
                 data += offset
-                lDataBuffer[i][j] = data
+                self.dataBuffer[i][j] = data
 
         numch = self.parameters['parser']['channel']
         for ch in range(numch):
-            self.chdata[ch].extend(lDataBuffer[ch])
+            self.chdata[ch].extend(self.dataBuffer[ch])
 
         activechs = self.parameters['channels']['activechs']
         inactivechs = self.parameters['channels']['inactivechs']
@@ -685,6 +692,12 @@ class SerialStudio(QMainWindow):
         self.labelpacketrate.setText("%d pps" % self.parser.getPacketRate())
         self.labelerrorrate.setText("%d pps" % self.parser.getErrorRate())
         self.labelpacketqueue.setText("Queue: %d pps" % self.queue)
+        if self.dataBuffer is not None:
+            for i in range(self.parser.numChannels):
+                if len(self.dataBuffer) <= i:
+                    break
+                if len(self.dataBuffer[i]) > 0:
+                    self.channels.child("Channel_{0}".format(i)).child('Value').setValue(self.dataBuffer[i][-1])
         self.calculateXAxes()
 
 def main():

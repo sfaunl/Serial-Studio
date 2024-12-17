@@ -429,20 +429,22 @@ class SerialStudio(QMainWindow):
     def paramChannelChanged(self):
         if self.debug:
             print("paramChannelChanged")
-        channelopts = self.channels
-        numchan = self.parameters['parser']['channel']
 
-        # update active/inactive channels variable
-        activechs = []
-        inactivechs = []
-        for ch in range(numchan):
-            isactive = channelopts.child("Channel_{}".format(ch)).value()
-            if isactive == True:
-                activechs.append(ch)
-            else:
-                inactivechs.append(ch)
-        self.parameters['channels']['activechs'] = activechs
-        self.parameters['channels']['inactivechs'] = inactivechs
+        channelopts = self.channels
+        with channelopts.treeChangeBlocker():
+            # update active/inactive channels variable
+            activechs = []
+            inactivechs = []
+
+            numchan = self.parameters['parser']['channel']
+            for ch in range(numchan):
+                isactive = channelopts.child("Channel_{}".format(ch)).value()
+                if isactive == True:
+                    activechs.append(ch)
+                else:
+                    inactivechs.append(ch)
+            self.parameters['channels']['activechs'] = activechs
+            self.parameters['channels']['inactivechs'] = inactivechs
 
     def paramSerialChanged(self):
         if self.debug:

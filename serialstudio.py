@@ -436,13 +436,32 @@ class SerialStudio(QMainWindow):
             activechs = []
             inactivechs = []
 
+            dataitems_t = self.plotter_t.listDataItems()
+            dataitems_f = self.plotter_f.listDataItems()
             numchan = self.parameters['parser']['channel']
             for ch in range(numchan):
+                # Remove all visible plot data
+                if ch < len(dataitems_t):
+                    self.plotter_t.removeItem(dataitems_t[ch])
+                    self.plotter_f.removeItem(dataitems_f[ch])
+
                 isactive = channelopts.child("Channel_{}".format(ch)).value()
                 if isactive == True:
+                    # Add the active plot channels
+                    chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
+                    chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
+                    #chTitle = self.parameters['channel_names']["Channel_{}".format(ch)]
+                    plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
+                    self.plotter_t.addItem(plotData)
+                    plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
+                    self.plotter_f.addItem(plotData)
+
+                    # Update active channels
                     activechs.append(ch)
                 else:
+                    # Update inactive channels
                     inactivechs.append(ch)
+
             self.parameters['channels']['activechs'] = activechs
             self.parameters['channels']['inactivechs'] = inactivechs
 

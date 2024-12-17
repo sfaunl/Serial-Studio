@@ -540,6 +540,8 @@ class SerialStudio(QMainWindow):
                 if ch >= numchan:
                     self.plotter_t.removeItem(dataitems_t[ch])
                     self.plotter_f.removeItem(dataitems_f[ch])
+                if len(self.chdata) <= ch:
+                    self.chdata.append([])
                 if ch >= numdataitems:
                     # Color scheme from https://sashamaps.net/docs/resources/20-colors/
                     color = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
@@ -548,7 +550,6 @@ class SerialStudio(QMainWindow):
                     self.plotter_t.addItem(plotData)
                     plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
                     self.plotter_f.addItem(plotData)
-                    self.chdata.append([])
 
             # set new parser config
             self.parser.setParserScheme(aEncoding=self.parameters['parser']['encoding'],
@@ -690,21 +691,23 @@ class SerialStudio(QMainWindow):
         tstart = - min(self.parameters['plotter']['buffersize'] + 1, len(self.chdata[0]))
         tend = -1
 
-        for ch in inactivechs:
-            dataItems_t[ch].clear()
-        for ch in activechs:
+        for i, ch in enumerate(inactivechs):
+            if len(dataItems_t) > i:
+                dataItems_t[i].clear()
+        for i, ch in enumerate(activechs):
             if ch >= len(dataItems_t):
                 continue
 
-            # prepend zeros if the data is shorter than the plot length
-            lenChData = len(self.chdata[ch][tstart:tend])
-            lenXt = len(self.Xt[0:-tstart-1])
-            if lenChData != lenXt:
-                numZeros = lenXt - lenChData
-                self.chdata[ch][tstart:tend] = [0] * numZeros + self.chdata[ch][tstart:tend]
+            if len(dataItems_t) > i:
+                # prepend zeros if the data is shorter than the plot length
+                lenChData = len(self.chdata[ch][tstart:tend])
+                lenXt = len(self.Xt[0:-tstart-1])
+                if lenChData != lenXt:
+                    numZeros = lenXt - lenChData
+                    self.chdata[ch][tstart:tend] = [0] * numZeros + self.chdata[ch][tstart:tend]
 
-            # update plot data
-            dataItems_t[ch].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
+                # update plot data
+                dataItems_t[ch].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
         # draw frequency domain plot
         lfNSamples = self.parameters['fft']['fftsize']
@@ -716,13 +719,15 @@ class SerialStudio(QMainWindow):
             fend = (lfNSamples // 2) - 1
 
             dataItems_f = self.plotter_f.listDataItems()
-            for ch in inactivechs:
-                dataItems_f[ch].clear()
-            for ch in activechs:
+            for i, ch in enumerate(inactivechs):
+                if len(dataItems_t) > i:
+                    dataItems_f[i].clear()
+            for i, ch in enumerate(activechs):
                 if ch >= len(dataItems_f):
                     continue
-                self.Yf = fft(self.chdata[ch][tstart:tend])
-                dataItems_f[ch].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
+                if len(dataItems_t) > i:
+                    self.Yf = fft(self.chdata[ch][tstart:tend])
+                    dataItems_f[ch].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
 
     def update_ui(self):
         if self.parser == None:

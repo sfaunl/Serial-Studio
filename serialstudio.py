@@ -73,6 +73,7 @@ class SerialStudio(QMainWindow):
         'parser': {
             'encoding': 0,
             'startbyte': [0xAA, 0xBB],
+            'discardbytes': 0,
             'endbyte': [],
             'channel': 3,
             'checksum' : 0,
@@ -138,6 +139,7 @@ class SerialStudio(QMainWindow):
         dict(name='parseropts', title='Parser Options', type='group', children=[
             dict(name='Encoding', type='list', limits={'NONE': 0, 'COBS': 1}, value=0), #HDLC, COBS
             dict(name='StartByte', type='str', value="AA BB"),
+            dict(name='DiscardBytes', type='int', limits=[0, 255], value=0),
             dict(name='EndByte', type='str', value=""),
             dict(name='Channels', type='int', limits=[0, 24], value=3),
             dict(name='CheckSum', type='list', limits={'CRC_NONE': 0, 'CRC16_CRITT_FALSE': 1}, value=0),
@@ -179,6 +181,7 @@ class SerialStudio(QMainWindow):
         # init parser
         self.parser = sp.SerialParser(aEncoding=self.parameters['parser']['encoding'],
                                       aStartSequence=self.parameters['parser']['startbyte'],
+                                      aDiscardBytes=self.parameters['parser']['discardbytes'],
                                       aEndSequence=self.parameters['parser']['endbyte'],
                                       aCheckSum=self.parameters['parser']['checksum'],
                                       aDataType=self.parameters['parser']['datatype'],
@@ -396,6 +399,7 @@ class SerialStudio(QMainWindow):
             for byte in startbytelist:
                 hexstr += format(byte, 'X') + " "
             parseropts.child('StartByte').setValue(hexstr)
+            parseropts.child('DiscardBytes').setValue(self.parameters['parser']['discardbytes'])
 
             endbytelist = self.parameters['parser']['endbyte']
             hexstr = ""
@@ -474,6 +478,7 @@ class SerialStudio(QMainWindow):
         self.parameters['parser']['encoding'] = parseropts.child('Encoding').value()
         startByteStr = parseropts.child('StartByte').value()
         self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr))
+        self.parameters['parser']['discardbytes'] = parseropts.child('DiscardBytes').value()
         endByteStr = parseropts.child('EndByte').value()
         self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr))
         numchan = parseropts.child('Channels').value()
@@ -515,6 +520,7 @@ class SerialStudio(QMainWindow):
         # set new parser config
         self.parser.setParserScheme(aEncoding=self.parameters['parser']['encoding'],
                                     aStartSequence=self.parameters['parser']['startbyte'],
+                                    aDiscardBytes=self.parameters['parser']['discardbytes'],
                                     aEndSequence=self.parameters['parser']['endbyte'],
                                     aCheckSum=self.parameters['parser']['checksum'],
                                     aDataType=self.parameters['parser']['datatype'],

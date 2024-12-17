@@ -112,6 +112,7 @@ class SerialParser:
     def __init__(self,
                  aEncoding,
                  aStartSequence,
+                 aDiscardBytes,
                  aDataType:DataType,
                  aNumChannel,
                  aCheckSum:CheckSum,
@@ -122,7 +123,7 @@ class SerialParser:
         self.packetBuffer       = bytearray()
         self.serialBuffer       = bytearray()
         self.debug              = aEnableDebug
-        self.setParserScheme(aEncoding, aStartSequence, aDataType, aNumChannel, aCheckSum, aEndianness, aEndSequence)
+        self.setParserScheme(aEncoding, aStartSequence, aDiscardBytes, aDataType, aNumChannel, aCheckSum, aEndianness, aEndSequence)
         self.packetRate         = 0
         self.packetCount        = 0
         self.startTime          = 0
@@ -132,6 +133,7 @@ class SerialParser:
     def setParserScheme(self,
                         aEncoding,
                         aStartSequence,
+                        aDiscardBytes,
                         aDataType:DataType,
                         aNumChannel,
                         aCheckSum:CheckSum = CheckSum.NONE,
@@ -142,12 +144,13 @@ class SerialParser:
         self.numChannels        = aNumChannel
         self.encoding           = aEncoding
         self.startSequence      = aStartSequence
+        self.discardBytes       = aDiscardBytes
         self.checkSum           = aCheckSum
         self.endSequence        = aEndSequence
         self.endianness         = aEndianness
 
         self.payloadSize        = self.numChannels * DataType().getSize(self.dataType)
-        self.headerSize         = len(self.startSequence)
+        self.headerSize         = len(self.startSequence) + self.discardBytes
         self.checkSumSize       = CheckSum().getSize(self.checkSum)
         self.packetSize         = self.headerSize + self.payloadSize + self.checkSumSize + len(self.endSequence)
         self.encodedSize        = self.packetSize + Encoding().getMinOverhead(self.encoding, self.packetSize)
@@ -165,6 +168,8 @@ class SerialParser:
     def getExpected(self):
         explst = []
         explst.extend(self.startSequence)
+        for i in range(self.discardBytes):
+            explst.append('xx')
         for i in range(self.numChannels * DataType().getSize(self.dataType)):
             explst.append('XX')
         explst.extend(self.endSequence)

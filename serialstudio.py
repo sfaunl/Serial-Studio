@@ -440,6 +440,10 @@ class SerialStudio(QMainWindow):
             dataitems_f = self.plotter_f.listDataItems()
             numchan = self.parameters['parser']['channel']
             for ch in range(numchan):
+                # Update the title of the plot
+                newTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
+                channelopts.child("Channel_{}".format(ch)).setOpts(title=newTitle)
+
                 # Remove all visible plot data
                 if ch < len(dataitems_t):
                     self.plotter_t.removeItem(dataitems_t[ch])

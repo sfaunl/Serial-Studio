@@ -498,8 +498,10 @@ class SerialStudio(QMainWindow):
             for ch in range(max(numchan, childcount)):
                 chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
                 if ch >= numchan:
-                    channelopts.removeChild(
-                        channelopts.child(chtitle))
+                    try:
+                        channelopts.removeChild(channelopts.child(chtitle))
+                    except:
+                        pass
                 elif ch >= childcount:
                     child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
                     chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})

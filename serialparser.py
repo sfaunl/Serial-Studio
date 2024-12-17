@@ -197,6 +197,9 @@ class SerialParser:
                 self.packetBuffer = bytearray(cobs.decode(self.packetBuffer))
                 #print(" ".join(format(x, '02X') for x in self.packetBuffer))
 
+            if len(self.packetBuffer) < self.packetSize:
+                break
+
             lNotFound = 0
             # search for start sequence
             for i, val in enumerate(self.startSequence):

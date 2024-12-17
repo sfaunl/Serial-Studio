@@ -716,7 +716,7 @@ class SerialStudio(QMainWindow):
             if len(dataItems_t) > i:
                 dataItems_t[i].clear()
         for i, ch in enumerate(activechs):
-            if ch >= len(dataItems_t):
+            if i >= len(dataItems_t):
                 continue
 
             if len(dataItems_t) > i:
@@ -728,7 +728,7 @@ class SerialStudio(QMainWindow):
                     self.chdata[ch][tstart:tend] = [0] * numZeros + self.chdata[ch][tstart:tend]
 
                 # update plot data
-                dataItems_t[ch].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
+                dataItems_t[i].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
         # draw frequency domain plot
         lfNSamples = self.parameters['fft']['fftsize']
@@ -744,11 +744,11 @@ class SerialStudio(QMainWindow):
                 if len(dataItems_t) > i:
                     dataItems_f[i].clear()
             for i, ch in enumerate(activechs):
-                if ch >= len(dataItems_f):
+                if i >= len(dataItems_f):
                     continue
                 if len(dataItems_t) > i:
                     self.Yf = fft(self.chdata[ch][tstart:tend])
-                    dataItems_f[ch].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
+                    dataItems_f[i].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
 
     def update_ui(self):
         if self.parser == None:

@@ -772,6 +772,13 @@ class SerialStudio(QMainWindow):
         self.parameters['fft']['autoscale'] = fftopts.child('Autoscale').value()
         self.parameters['fft']['showdc'] = fftopts.child('Show DC').value()
         self.parameters['fft']['fftsize'] = fftopts.child('NSamples').value()
+
+        # show/hide fft plot
+        if fftopts.child('Enable').value() == False:
+            self.glw.ci.layout.itemAt(1).setVisible(False)
+        else:
+            self.glw.ci.layout.itemAt(1).setVisible(True)
+
         self.calculateXAxes()
 
     def serial_connect(self):
@@ -924,10 +931,7 @@ class SerialStudio(QMainWindow):
                 dataItems_t[i].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
         # draw frequency domain plot
-        if self.parameters['fft']['enable'] == False:
-            self.glw.ci.layout.itemAt(1).setVisible(False)
-        else:
-            self.glw.ci.layout.itemAt(1).setVisible(True)
+        if self.parameters['fft']['enable'] == True:
             lfNSamples = self.parameters['fft']['fftsize']
             if(len(self.chdata[0]) > lfNSamples):
                 tstart = -min(lfNSamples + 1, len(self.chdata[0]))

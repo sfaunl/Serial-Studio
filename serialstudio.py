@@ -44,7 +44,9 @@ class ConfigParser():
     def __init__(self, filename = "config.json"):
         self.configfile = filename
 
-    def loadConfig(self):
+    def loadConfig(self, filename = None):
+        if filename != None:
+            self.configfile = filename
         try:
             with open(self.configfile) as json_config_file:
                 data = json.load(json_config_file)
@@ -52,7 +54,9 @@ class ConfigParser():
         except:
             return
 
-    def saveConfig(self, parameters:dict):
+    def saveConfig(self, parameters:dict, filename = None):
+        if filename != None:
+            self.configfile = filename
         try:
             with open(self.configfile, "w") as json_config_file:
                 json.dump(parameters, json_config_file, indent=2)
@@ -66,6 +70,7 @@ class SerialStudio(QMainWindow):
 
     colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
     defaultParams = {
+        'version': version,
         'conn': {
             'portname': '',
             'baudrate': 115200,
@@ -300,7 +305,7 @@ class SerialStudio(QMainWindow):
         #                              aNumChannel=self.parameters['parser']['channel'],
         #                              aEndianness=self.parameters['parser']['endianness'])
 
-        configLoaded = self.loadconfig()
+        configLoaded = self.loadconfig("config.json")
         if configLoaded == False:
             # init paramtree values manually
             self.paramSerialChanged()
@@ -372,6 +377,11 @@ class SerialStudio(QMainWindow):
         save_action.setShortcut("CTRL+S")
         save_action.setIcon(QIcon.fromTheme('document-save'))
         save_action.triggered.connect(self.saveconfig)
+        saveas_action = QAction('Save Config As', self)
+        saveas_action.setStatusTip("Save current config as")
+        saveas_action.setShortcut("CTRL+SHIFT+S")
+        saveas_action.setIcon(QIcon.fromTheme('document-save-as'))
+        saveas_action.triggered.connect(self.saveasconfig)
         load_action = QAction('Load Config', self)
         load_action.setStatusTip("Load config")
         load_action.setIcon(QIcon.fromTheme('document-open'))
@@ -404,6 +414,7 @@ class SerialStudio(QMainWindow):
         file_menu.addAction(exit_action)
 
         config_menu.addAction(save_action)
+        config_menu.addAction(saveas_action)
         config_menu.addAction(load_action)
         config_menu.addAction(restore_action)
 
@@ -478,33 +489,95 @@ class SerialStudio(QMainWindow):
     def saveconfig(self):
         retval = self.config.saveConfig(self.parameters)
         if retval:
-            msg = "Config file saved"
+            msg = f"Configuration file saved successfully: {self.config.configfile}"
             self.statusBar().showMessage(msg)
             print(msg)
         else:
-            msg = "Error saving config file"
+            msg = f"Failed to save configuration file: {self.config.configfile}"
             self.statusBar().showMessage(msg)
             print(msg)
 
-    def loadconfig(self):
-        params = self.config.loadConfig()
-        if params:
-            self.parameters = params
-            self.loadParameters()
-            msg = "Config file loaded"
-            self.statusBar().showMessage(msg)
-            print(msg)
-            return True
+    def saveasconfig(self):
+        # Open a file dialog to select a file to save the configuration
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Configuration File",  # Dialog title
+            "config_1.json",  # Default file name
+            "Config Files (*.json);;All Files (*.*)"  # File filters
+        )
+
+        # Check if a file was selected
+        if filename:
+            retval = self.config.saveConfig(self.parameters, filename)
+            if retval:
+                msg = f"Configuration file saved successfully: {self.config.configfile}"
+                self.statusBar().showMessage(msg)
+                print(msg)
+            else:
+                msg = f"Failed to save configuration file: {self.config.configfile}"
+                self.statusBar().showMessage(msg)
+                print(msg)
         else:
-            msg = "Error loading config file"
+            msg = "No file was selected to save the configuration."
             self.statusBar().showMessage(msg)
             print(msg)
-            return False
+
+    def loadconfig(self, filename=None):
+        if filename is None or filename == False:
+            # Open a file dialog to select a configuration file
+            filename, _ = QFileDialog.getOpenFileName(
+                self,
+                "Open Configuration File",  # Dialog title
+                "",  # Initial directory ("" for current directory)
+                "Config Files (*.json);;All Files (*.*)"  # File filters
+            )
+
+        # Check if a file was selected
+        if filename:
+            try:
+                # Attempt to load the configuration file
+                params = self.config.loadConfig(filename)
+
+                if params:
+                    if params.get('version') != self.version:
+                        msg = f"Configuration file version mismatch: {params.get('version')}. Expected: {self.version}"
+                        self.statusBar().showMessage(msg)
+                        print(msg)
+                        return False
+
+                    self.parameters = params
+                    self.loadParameters()
+
+                    # Display a confirmation message if the config was loaded successfully
+                    msg = f"Configuration file loaded successfully: {filename}"
+                    self.statusBar().showMessage(msg)
+                    print(msg)
+
+                    return True
+                else:
+                    # Display an error message if the config file could not be loaded
+                    msg = f"Failed to load configuration file: {filename}"
+                    self.statusBar().showMessage(msg)
+                    print(msg)
+                    return False
+
+            except Exception as e:
+                # Handle any errors during config loading
+                msg = f"Failed to load configuration file:\n{str(e)}"
+                self.statusBar().showMessage(msg)
+                print(msg)
+
+        else:
+            # User canceled the file dialog
+            msg = "No configuration file was selected."
+            self.statusBar().showMessage(msg)
+            print(msg)
+            return None
 
     def restoreconfig(self):
         self.parameters = self.defaultParams
         self.loadParameters()
-        msg = "Config restored"
+        msg = "Configuration restored to default values."
         self.statusBar().showMessage(msg)
         print(msg)
 

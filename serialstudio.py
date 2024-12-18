@@ -5,8 +5,8 @@ Created on Sat Apr 23 02:08:23 2022
 @brief      Serial data visualizer
 @author     Sefa Unal
 
-@version    0.2.2
-@date       25/08/2022
+@version    0.2.6
+@date       18/12/2024
 @since		v0.1 : initial release
 @since		v0.2 : add multiplier and offset
 @since		v0.2.1 : fix loading incorrect parameters

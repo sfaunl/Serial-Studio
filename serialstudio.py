@@ -28,6 +28,7 @@ import pyqtgraph as pg
 import pyqtgraph.parametertree as ptree
 import pyqtgraph.exporters
 
+import os
 import sys
 import time
 import serial
@@ -251,6 +252,7 @@ class SerialStudio(QMainWindow):
         self.queue = 0
         self.dataBuffer = None
         self.chdata = []
+        self.lastPacketTime = None
 
         self.parameters = self.defaultParams
         self.config = ConfigParser()
@@ -350,11 +352,23 @@ class SerialStudio(QMainWindow):
         restore_action.setIcon(QIcon.fromTheme('document-revert'))
         restore_action.triggered.connect(self.restoreconfig)
 
+        start_log_action = QAction('Start Logging', self)
+        start_log_action.setStatusTip("Start logging data")
+        start_log_action.setShortcut("CTRL+L")
+        start_log_action.setIcon(QIcon.fromTheme('document-save'))
+        start_log_action.triggered.connect(self.startlogging)
+        stop_log_action = QAction('Stop Logging', self)
+        stop_log_action.setStatusTip("Stop logging data")
+        stop_log_action.setShortcut("CTRL+K")
+        stop_log_action.setIcon(QIcon.fromTheme('document-save'))
+        stop_log_action.triggered.connect(self.stoplogging)
+
         # menu-bar
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
         config_menu = menu_bar.addMenu('&Config')
+        log_menu = menu_bar.addMenu('&Log')
 
         file_menu.addAction(capture_action)
         file_menu.addSeparator()
@@ -363,6 +377,9 @@ class SerialStudio(QMainWindow):
         config_menu.addAction(save_action)
         config_menu.addAction(load_action)
         config_menu.addAction(restore_action)
+
+        log_menu.addAction(start_log_action)
+        log_menu.addAction(stop_log_action)
 
         # statusbar stats
         statswidget = QWidget(self)
@@ -454,6 +471,46 @@ class SerialStudio(QMainWindow):
         msg = "Config restored"
         self.statusBar().showMessage(msg)
         print(msg)
+
+    def startlogging(self):
+        logdirectory = "logs"
+
+        # Ensure the log directory exists
+        os.makedirs(logdirectory, exist_ok=True)
+
+        # Generate the timestamped log file name
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        log_prefix = f"serialstudio_log_{timestamp}"
+        existinglogs = [file for file in os.listdir(logdirectory) if file.endswith(".csv")]
+
+        # Determine the next available log number
+        lognumber = sum(1 for file in existinglogs if file.startswith(log_prefix))
+        logfilename = "{}_{:03d}.csv".format(log_prefix, lognumber)
+
+        # Make sure the log file does not already exist
+        while logfilename in existinglogs:
+            lognumber += 1
+            logfilename = "{}_{:03d}.csv".format(log_prefix, lognumber)
+
+        # Get absolute log path
+        self.logfile = os.path.join(logdirectory, logfilename)
+        print(f"Logging to file: {self.logfile}")
+
+        # Open the log file and write the header
+        self.logfilehandle = open(self.logfile, 'w')
+        header = "\"Timestamp\", " + ", ".join(
+            f"\"{self.parameters['channel_config'][f'Channel_{ch}']['name']}\""
+            for ch in range(self.parameters['parser']['channel'])
+        ) + "\n"
+        self.logfilehandle.write(header)
+        self.logfilehandle.flush()
+
+        self.startLogging = True
+        self.logStartTime = time.time()
+
+    def stoplogging(self):
+        self.startLogging = False
+        self.logfilehandle.close()
 
     def loadParameters(self):
         seropts = self.sources.child('serialopts')
@@ -788,6 +845,7 @@ class SerialStudio(QMainWindow):
         if len(self.dataBuffer[0]) == 0:
             return
 
+        # Apply multiplier and offset to the data
         multiplier = self.parameters['plotter']['multiplier']
         offset = self.parameters['plotter']['offset']
         for i, ch in enumerate(self.dataBuffer):
@@ -796,17 +854,42 @@ class SerialStudio(QMainWindow):
                 data += offset
                 self.dataBuffer[i][j] = data
 
+        # Generate timestamps for the bulk-received packets
+        currentTime = time.time()
+        if self.lastPacketTime is None:
+            # If no previous packet time, use current time for the entire buffer
+            timestamps = [currentTime for _ in range(len(self.dataBuffer[0]))]
+        else:
+            # Distribute timestamps evenly between the last packet and now
+            numPackets = len(self.dataBuffer[0])
+            timeDiff = currentTime - self.lastPacketTime
+            timestamps = [
+                self.lastPacketTime + (timeDiff / numPackets) * i
+                for i in range(numPackets)
+            ]
+
+        # Update the last packet time
+        self.lastPacketTime = currentTime
+
+        # update log file
+        if self.startLogging:
+            transposedBuffer = list(map(list, zip(*self.dataBuffer)))
+            for i, data in enumerate(transposedBuffer):
+                timestamp = timestamps[i] - self.logStartTime
+                self.logfilehandle.write(f"{timestamp:.5f}, {', '.join(map(str, data))}\n")
+
+        # Append the new data to the channel data
         numch = self.parameters['parser']['channel']
         for ch in range(numch):
             self.chdata[ch].extend(self.dataBuffer[ch])
 
-        activechs = self.parameters['channels']['activechs']
-        inactivechs = self.parameters['channels']['inactivechs']
-        dataItems_t = self.plotter_t.listDataItems()
-
         # draw time domain plot
         tstart = - min(self.parameters['plotter']['buffersize'] + 1, len(self.chdata[0]))
         tend = -1
+
+        activechs = self.parameters['channels']['activechs']
+        inactivechs = self.parameters['channels']['inactivechs']
+        dataItems_t = self.plotter_t.listDataItems()
 
         for i, ch in enumerate(activechs):
             if i >= len(dataItems_t):
@@ -823,11 +906,11 @@ class SerialStudio(QMainWindow):
                 # update plot data
                 dataItems_t[i].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
+        # draw frequency domain plot
         if self.parameters['fft']['enable'] == False:
             self.glw.ci.layout.itemAt(1).setVisible(False)
         else:
             self.glw.ci.layout.itemAt(1).setVisible(True)
-            # draw frequency domain plot
             lfNSamples = self.parameters['fft']['fftsize']
             if(len(self.chdata[0]) > lfNSamples):
                 tstart = -min(lfNSamples + 1, len(self.chdata[0]))

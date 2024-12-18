@@ -675,10 +675,12 @@ class SerialStudio(QMainWindow):
             for ch in range(self.parameters['parser']['channel']):
                 chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
                 chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
-                child = self.channels.child("Channel_{}".format(ch))
-                child.setValue(True)
-                child.child('Name').setValue(chtitle)
-                child.child('Color').setValue(chcolor)
+                numEntries = len(self.channels.childs) - 2 # subtract 2 for the select all and deselect all entries
+                if numEntries > ch:
+                    chEntry = self.channels.child("Channel_{}".format(ch))
+                    chEntry.setValue(True)
+                    chEntry.child('Name').setValue(chtitle)
+                    chEntry.child('Color').setValue(chcolor)
 
     def paramChannelChanged(self):
         if self.debug:
@@ -704,10 +706,17 @@ class SerialStudio(QMainWindow):
 
             for ch in range(numchan):
                 # Update the title of the plot
-                oldTitle = channelopts.child("Channel_{}".format(ch)).title()
-                newTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
-                chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
-                channelopts.child("Channel_{}".format(ch)).setOpts(title=newTitle)
+                rowTitle = channelopts.child("Channel_{}".format(ch)).opts['title']
+                chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
+                chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value().name()
+                channelopts.child("Channel_{}".format(ch)).setOpts(title=chTitle)
+
+                # Check if the channel title and color has been updated
+                chTitleParam = self.parameters['channel_config'][f'Channel_{ch}']['name']
+                chColorParam = self.parameters['channel_config'][f'Channel_{ch}']['color']
+                if chTitle == rowTitle:
+                    chTitle = chTitleParam
+                    chColor = chColorParam
 
                 # This is a workaround to update the title and color of the plot
                 # If active channel count does not match the number of data items displayed
@@ -721,14 +730,13 @@ class SerialStudio(QMainWindow):
                     if isactive == True:
                         # Add the active plot channels
                         chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
-                        chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
                         plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
                         self.plotter_t.addItem(plotData)
                         plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
                         self.plotter_f.addItem(plotData)
 
-                self.parameters['channel_config']["Channel_{}".format(ch)]['name'] = newTitle
-                self.parameters['channel_config']["Channel_{}".format(ch)]['color'] = chColor.name()
+                self.parameters['channel_config']["Channel_{}".format(ch)]['name'] = chTitle
+                self.parameters['channel_config']["Channel_{}".format(ch)]['color'] = chColor
 
             if len(activechs) == 0:
                 self.channels.child("Select All").setOpts(visible=True)
@@ -811,10 +819,10 @@ class SerialStudio(QMainWindow):
                     if ch >= numchan:
                         channelopts.removeChild(channelopts.child(("Channel_{0}".format(ch))))
                     elif ch >= childcount:
-                        child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
-                        chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
-                        child.addChild({'name': 'Color', 'type': 'color', 'value': chcolor})
-                        child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
+                        newChannel = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
+                        newChannel.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
+                        newChannel.addChild({'name': 'Color', 'type': 'color', 'value': chcolor})
+                        newChannel.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
             dataitems_t = self.plotter_t.listDataItems()
             dataitems_f = self.plotter_f.listDataItems()
             numdataitems = len(dataitems_t)

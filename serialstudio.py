@@ -439,6 +439,15 @@ class SerialStudio(QMainWindow):
             dataitems_t = self.plotter_t.listDataItems()
             dataitems_f = self.plotter_f.listDataItems()
             numchan = self.parameters['parser']['channel']
+
+            # Update number of active/inactive channels
+            for ch in range(numchan):
+                isactive = channelopts.child("Channel_{}".format(ch)).value()
+                if isactive == True:
+                    activechs.append(ch)
+                else:
+                    inactivechs.append(ch)
+
             for ch in range(numchan):
                 # Update the title of the plot
                 oldTitle = channelopts.child("Channel_{}".format(ch)).title()
@@ -446,26 +455,24 @@ class SerialStudio(QMainWindow):
                 chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
                 channelopts.child("Channel_{}".format(ch)).setOpts(title=newTitle)
 
-                # Remove all visible plot data
-                if ch < len(dataitems_t):
-                    self.plotter_t.removeItem(dataitems_t[ch])
-                    self.plotter_f.removeItem(dataitems_f[ch])
+                # This is a workaround to update the title and color of the plot
+                # If active channel count does not match the number of data items displayed
+                # remove the data items and add them again to update the new title and color
+                if len(activechs) != len(dataitems_t):
+                    if ch < len(dataitems_t):
+                        self.plotter_t.removeItem(dataitems_t[ch])
+                        self.plotter_f.removeItem(dataitems_f[ch])
 
-                isactive = channelopts.child("Channel_{}".format(ch)).value()
-                if isactive == True:
-                    # Add the active plot channels
-                    chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
-                    chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
-                    plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
-                    self.plotter_t.addItem(plotData)
-                    plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
-                    self.plotter_f.addItem(plotData)
+                    isactive = channelopts.child("Channel_{}".format(ch)).value()
+                    if isactive == True:
+                        # Add the active plot channels
+                        chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
+                        chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
+                        plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
+                        self.plotter_t.addItem(plotData)
+                        plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
+                        self.plotter_f.addItem(plotData)
 
-                    # Update active channels
-                    activechs.append(ch)
-                else:
-                    # Update inactive channels
-                    inactivechs.append(ch)
 
             if len(activechs) == 0:
                 self.channels.child("Select All").setOpts(visible=True)

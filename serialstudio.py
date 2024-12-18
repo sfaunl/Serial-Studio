@@ -212,7 +212,7 @@ class SerialStudio(QMainWindow):
         }
     }
 
-    source_children = [
+    settings_children = [
         dict(name='connect', title='Connect', type='action', children=[
             dict(name='connected', title='Connected', type='str', value='', readonly=True, visible=False),
         ]),
@@ -240,20 +240,19 @@ class SerialStudio(QMainWindow):
             dict(name='Endianness', type='list', limits={'LITTLE': 0, 'BIG': 1}, value=0),
             dict(name='Expected', type='str', value='', readonly=True),
         ]),
-    ]
-
-    plotsettings_children = [
-        dict(name='plotteropts', title='Plotter Options', type='group', children=[
-            dict(name='Autoscale', type='bool', value=True, enabled=False),
-            dict(name='Plot Length', type='int', limits=[0, None], step=1000, value=4096),
-            dict(name='Multiplier', type='float', value=1.0, precision=2),
-            dict(name='Offset', type='float', value=0.0, precision=2),
-        ]),
-        dict(name='fftopts', title='FFT Options', type='group', children=[
-            dict(name='Enable', type='bool', value=False),
-            dict(name='Autoscale', type='bool', value=True, enabled=False),
-            dict(name='Show DC', type='bool', value=False),
-            dict(name='NSamples', type='int', limits=[0, None], value=1024),
+        dict(name='plotopts', title='Settings', type='group', children=[
+            dict(name='plotteropts', title='Plotter Options', type='group', children=[
+                dict(name='Autoscale', type='bool', value=True, enabled=False),
+                dict(name='Plot Length', type='int', limits=[0, None], step=1000, value=4096),
+                dict(name='Multiplier', type='float', value=1.0, precision=2),
+                dict(name='Offset', type='float', value=0.0, precision=2),
+            ]),
+            dict(name='fftopts', title='FFT Options', type='group', children=[
+                dict(name='Enable', type='bool', value=False),
+                dict(name='Autoscale', type='bool', value=True, enabled=False),
+                dict(name='Show DC', type='bool', value=False),
+                dict(name='NSamples', type='int', limits=[0, None], value=1024),
+            ]),
         ]),
     ]
 
@@ -303,22 +302,19 @@ class SerialStudio(QMainWindow):
 
     def initUI(self):
         # Parameter tree object
-        self.sources = ptree.Parameter.create(name='Source', type='group', children=self.source_children)
-        self.settings = ptree.Parameter.create(name='Settings', type='group', children=self.plotsettings_children)
+        self.sources = ptree.Parameter.create(name='Source', type='group', children=self.settings_children)
         self.channels = ptree.Parameter.create(name='Channels', type='group')
 
         sourcetree = ptree.ParameterTree(showHeader=False)
         sourcetree.setParameters(self.sources)
-        settingstree = ptree.ParameterTree(showHeader=False)
-        settingstree.setParameters(self.settings)
         channeltree = ptree.ParameterTree(showHeader=False)
         channeltree.setParameters(self.channels)
 
         self.channels.sigTreeStateChanged.connect(self.paramChannelChanged)
         self.sources.child('serialopts').sigTreeStateChanged.connect(self.paramSerialChanged)
         self.sources.child('parseropts').sigTreeStateChanged.connect(self.paramParserChanged)
-        self.settings.child('plotteropts').sigTreeStateChanged.connect(self.paramPlotterChanged)
-        self.settings.child('fftopts').sigTreeStateChanged.connect(self.paramFftChanged)
+        self.sources.child('plotopts').child('plotteropts').sigTreeStateChanged.connect(self.paramPlotterChanged)
+        self.sources.child('plotopts').child('fftopts').sigTreeStateChanged.connect(self.paramFftChanged)
         self.sources.child('connect').sigActivated.connect(self.serial_connect)
 
         # plotter object
@@ -435,10 +431,8 @@ class SerialStudio(QMainWindow):
         # place widgets in main window
         vsplitter = QSplitter(Qt.Vertical)
         vsplitter.addWidget(sourcetree)
-        vsplitter.addWidget(settingstree)
         vsplitter.addWidget(channeltree)
-        settingstree.setMinimumHeight(120)
-        channeltree.setMinimumHeight(120)
+        channeltree.setMinimumHeight(250)
 
         splitter = QSplitter(self)
         splitter.addWidget(vsplitter)
@@ -538,8 +532,8 @@ class SerialStudio(QMainWindow):
     def loadParameters(self):
         seropts = self.sources.child('serialopts')
         parseropts = self.sources.child('parseropts')
-        plotteropts = self.settings.child('plotteropts')
-        fftopts = self.settings.child('fftopts')
+        plotteropts = self.sources.child('plotopts').child('plotteropts')
+        fftopts = self.sources.child('plotopts').child('fftopts')
 
         #seropts
         with seropts.treeChangeBlocker():
@@ -763,7 +757,7 @@ class SerialStudio(QMainWindow):
     def paramPlotterChanged(self):
         if self.debug:
             print("paramPlotterChanged")
-        plotteropts = self.settings.child('plotteropts')
+        plotteropts = self.sources.child('plotopts').child('plotteropts')
         self.parameters['plotter']['autoscale'] = plotteropts.child('Autoscale').value()
         self.parameters['plotter']['buffersize'] = plotteropts.child('Plot Length').value()
         self.parameters['plotter']['offset'] = plotteropts.child('Offset').value()
@@ -773,7 +767,7 @@ class SerialStudio(QMainWindow):
     def paramFftChanged(self):
         if self.debug:
             print("paramFftChanged")
-        fftopts = self.settings.child('fftopts')
+        fftopts = self.sources.child('plotopts').child('fftopts')
         self.parameters['fft']['enable'] = fftopts.child('Enable').value()
         self.parameters['fft']['autoscale'] = fftopts.child('Autoscale').value()
         self.parameters['fft']['showdc'] = fftopts.child('Show DC').value()

@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QApplication,
     QStatusBar, QSplitter, QWidget, QHBoxLayout, QLabel
 )
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QPixmap, QIcon, QPainter, QFont
 from PySide6.QtCore import Qt, QTimer, QSize
 
 import pyqtgraph as pg
@@ -59,6 +59,18 @@ class ConfigParser():
         except:
             return False
 
+def create_emoji_icon(emoji, size=16):
+    """Create a QIcon from an emoji."""
+    pixmap = QPixmap(size, size)  # Create a pixmap with the specified size
+    pixmap.fill(Qt.transparent)  # Transparent background
+
+    painter = QPainter(pixmap)
+    font = QFont("Segoe UI Emoji", size)
+    painter.setFont(font)
+    painter.drawText(pixmap.rect(), Qt.AlignCenter, emoji)  # Draw emoji
+    painter.end()
+
+    return QIcon(pixmap)
 
 class SerialStudio(QMainWindow):
     appname = "Serial Studio"
@@ -247,6 +259,8 @@ class SerialStudio(QMainWindow):
 
     def __init__(self, debug=False):
         super().__init__()
+        self.counter = 0
+        self.startLogging = False
         self.debug = debug
         self.ser = None
         self.queue = 0
@@ -386,25 +400,34 @@ class SerialStudio(QMainWindow):
         hbox_stats = QHBoxLayout()
         statswidget.setLayout(hbox_stats)
 
-        labeldown = QLabel()
-        labelerror = QLabel()
-        labelqueue= QLabel()
+        self.labellogicon = QLabel()
+        labeldownicon = QLabel()
+        labelerroricon = QLabel()
+        labelqueueicon = QLabel()
+        self.labellog = QLabel("")
         self.labelpacketrate = QLabel("0 pps")
         self.labelerrorrate = QLabel("0 pps")
         self.labelpacketqueue = QLabel("0 pps")
-        downicon = QIcon.fromTheme('go-down')
-        erroricon = QIcon.fromTheme('network-error')
-        queueicon = QIcon.fromTheme('sync-synchronizing')
 
-        labeldown.setPixmap(downicon.pixmap(QSize(16, 16)))
-        labelerror.setPixmap(erroricon.pixmap(QSize(16, 16)))
-        labelqueue.setPixmap(queueicon.pixmap(QSize(16, 16)))
+        self.labellogicon.setVisible(False)
 
-        hbox_stats.addWidget(labeldown)
+        logicon = create_emoji_icon("🔴", size=16)
+        downicon = create_emoji_icon("🟢", size=16)
+        erroricon = create_emoji_icon("❌", size=16)
+        queueicon = create_emoji_icon("🔄", size=16)
+
+        self.labellogicon.setPixmap(logicon.pixmap(QSize(16, 16)))
+        labeldownicon.setPixmap(downicon.pixmap(QSize(16, 16)))
+        labelerroricon.setPixmap(erroricon.pixmap(QSize(16, 16)))
+        labelqueueicon.setPixmap(queueicon.pixmap(QSize(16, 16)))
+
+        hbox_stats.addWidget(self.labellogicon)
+        hbox_stats.addWidget(self.labellog)
+        hbox_stats.addWidget(labeldownicon)
         hbox_stats.addWidget(self.labelpacketrate)
-        hbox_stats.addWidget(labelerror)
+        hbox_stats.addWidget(labelerroricon)
         hbox_stats.addWidget(self.labelerrorrate)
-        hbox_stats.addWidget(labelqueue)
+        hbox_stats.addWidget(labelqueueicon)
         hbox_stats.addWidget(self.labelpacketqueue)
 
         self.statusBar().addPermanentWidget(statswidget)
@@ -929,12 +952,23 @@ class SerialStudio(QMainWindow):
                         dataItems_f[i].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
 
     def update_ui(self):
+        self.counter += 1
         if self.parser == None:
             return
 
         self.labelpacketrate.setText("%d pps" % self.parser.getPacketRate())
         self.labelerrorrate.setText("%d pps" % self.parser.getErrorRate())
         self.labelpacketqueue.setText("Queue: %d pps" % self.queue)
+        if self.startLogging:
+            # blink the logging icon
+            if self.counter % 2 == 0:
+                self.labellogicon.setVisible(True)
+            else:
+                self.labellogicon.setVisible(False)
+            self.labellog.setText("Logging: %s" % self.logfile)
+        else:
+            self.labellogicon.setVisible(False)
+            self.labellog.setText("")
 
         # Update channel value
         if self.dataBuffer is not None:

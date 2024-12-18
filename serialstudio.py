@@ -441,7 +441,9 @@ class SerialStudio(QMainWindow):
             numchan = self.parameters['parser']['channel']
             for ch in range(numchan):
                 # Update the title of the plot
+                oldTitle = channelopts.child("Channel_{}".format(ch)).title()
                 newTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
+                chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
                 channelopts.child("Channel_{}".format(ch)).setOpts(title=newTitle)
 
                 # Remove all visible plot data
@@ -454,7 +456,6 @@ class SerialStudio(QMainWindow):
                     # Add the active plot channels
                     chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
                     chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
-                    #chTitle = self.parameters['channel_names']["Channel_{}".format(ch)]
                     plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
                     self.plotter_t.addItem(plotData)
                     plotData = pg.PlotDataItem(pen=chColor, name=chTitle)

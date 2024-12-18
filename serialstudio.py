@@ -62,7 +62,8 @@ class SerialStudio(QMainWindow):
     appname = "Serial Studio"
     version = "0.2.5"
 
-    parameters = {
+    colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
+    defaultParams = {
         'conn': {
             'portname': '',
             'baudrate': 115200,
@@ -96,31 +97,104 @@ class SerialStudio(QMainWindow):
             'showdc': False,
             'fftsize': 1024
         },
-        'channel_names': {
-            'Channel_0': 'CH0',
-            'Channel_1': 'CH1',
-            'Channel_2': 'CH2',
-            'Channel_3': 'CH3',
-            'Channel_4': 'CH4',
-            'Channel_5': 'CH5',
-            'Channel_6': 'CH6',
-            'Channel_7': 'CH7',
-            'Channel_8': 'CH8',
-            'Channel_9': 'CH9',
-            'Channel_10': 'CH10',
-            'Channel_11': 'CH11',
-            'Channel_12': 'CH12',
-            'Channel_13': 'CH13',
-            'Channel_14': 'CH14',
-            'Channel_15': 'CH15',
-            'Channel_16': 'CH16',
-            'Channel_17': 'CH17',
-            'Channel_18': 'CH18',
-            'Channel_19': 'CH19',
-            'Channel_20': 'CH20',
-            'Channel_21': 'CH21',
-            'Channel_22': 'CH22',
-            'Channel_23': 'CH23'
+
+        'channel_config': {
+            'Channel_0': {
+                'name':'CH0',
+                'color': colorPalette[0 % len(colorPalette)]
+            },
+            'Channel_1': {
+                'name':'CH1',
+                'color': colorPalette[1 % len(colorPalette)]
+            },
+            'Channel_2': {
+                'name':'CH2',
+                'color': colorPalette[2 % len(colorPalette)]
+            },
+            'Channel_3': {
+                'name':'CH3',
+                'color': colorPalette[3 % len(colorPalette)]
+            },
+            'Channel_4': {
+                'name':'CH4',
+                'color': colorPalette[4 % len(colorPalette)]
+            },
+            'Channel_5': {
+                'name':'CH5',
+                'color': colorPalette[5 % len(colorPalette)]
+            },
+            'Channel_6': {
+                'name':'CH6',
+                'color': colorPalette[6 % len(colorPalette)]
+            },
+            'Channel_7': {
+                'name':'CH7',
+                'color': colorPalette[7 % len(colorPalette)]
+            },
+            'Channel_8': {
+                'name':'CH8',
+                'color': colorPalette[8 % len(colorPalette)]
+            },
+            'Channel_9': {
+                'name':'CH9',
+                'color': colorPalette[9 % len(colorPalette)]
+            },
+            'Channel_10': {
+                'name':'CH10',
+                'color': colorPalette[10 % len(colorPalette)]
+            },
+            'Channel_11': {
+                'name':'CH11',
+                'color': colorPalette[11 % len(colorPalette)]
+            },
+            'Channel_12': {
+                'name':'CH12',
+                'color': colorPalette[12 % len(colorPalette)]
+            },
+            'Channel_13': {
+                'name':'CH13',
+                'color': colorPalette[13 % len(colorPalette)]
+            },
+            'Channel_14': {
+                'name':'CH14',
+                'color': colorPalette[14 % len(colorPalette)]
+            },
+            'Channel_15': {
+                'name':'CH15',
+                'color': colorPalette[15 % len(colorPalette)]
+            },
+            'Channel_16': {
+                'name':'CH16',
+                'color': colorPalette[16 % len(colorPalette)]
+            },
+            'Channel_17': {
+                'name':'CH17',
+                'color': colorPalette[17 % len(colorPalette)]
+            },
+            'Channel_18': {
+                'name':'CH18',
+                'color': colorPalette[18 % len(colorPalette)]
+            },
+            'Channel_19': {
+                'name':'CH19',
+                'color': colorPalette[19 % len(colorPalette)]
+            },
+            'Channel_20': {
+                'name':'CH20',
+                'color': colorPalette[20 % len(colorPalette)]
+            },
+            'Channel_21': {
+                'name':'CH21',
+                'color': colorPalette[21 % len(colorPalette)]
+            },
+            'Channel_22': {
+                'name':'CH22',
+                'color': colorPalette[22 % len(colorPalette)]
+            },
+            'Channel_23': {
+                'name':'CH23',
+                'color': colorPalette[23 % len(colorPalette)]
+            }
         }
     }
 
@@ -177,7 +251,7 @@ class SerialStudio(QMainWindow):
         self.dataBuffer = None
         self.chdata = []
 
-        self.defaultParams = self.parameters
+        self.parameters = self.defaultParams
         self.config = ConfigParser()
         self.initUI()
 
@@ -429,6 +503,16 @@ class SerialStudio(QMainWindow):
             fftopts.child('Show DC').setValue(self.parameters['fft']['showdc'])
             fftopts.child('NSamples').setValue(self.parameters['fft']['fftsize'])
 
+        #channelopts
+        with self.channels.treeChangeBlocker():
+            for ch in range(self.parameters['parser']['channel']):
+                chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
+                chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
+                child = self.channels.child("Channel_{}".format(ch))
+                child.setValue(True)
+                child.child('Name').setValue(chtitle)
+                child.child('Color').setValue(chcolor)
+
     def paramChannelChanged(self):
         if self.debug:
             print("paramChannelChanged")
@@ -476,6 +560,8 @@ class SerialStudio(QMainWindow):
                         plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
                         self.plotter_f.addItem(plotData)
 
+                self.parameters['channel_config']["Channel_{}".format(ch)]['name'] = newTitle
+                self.parameters['channel_config']["Channel_{}".format(ch)]['color'] = chColor.name()
 
             if len(activechs) == 0:
                 self.channels.child("Select All").setOpts(visible=True)
@@ -552,15 +638,15 @@ class SerialStudio(QMainWindow):
                     buttonSelectAll.sigActivated.connect(self.selectAll)
                 childcount = len(channelopts.children()) - 2
 
-                colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
                 for ch in range(max(numchan, childcount)):
-                    chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
+                    chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
+                    chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
                     if ch >= numchan:
                         channelopts.removeChild(channelopts.child(("Channel_{0}".format(ch))))
                     elif ch >= childcount:
                         child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
                         chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
-                        child.addChild({'name': 'Color', 'type': 'color', 'value': colorPalette[ch % len(colorPalette)]})
+                        child.addChild({'name': 'Color', 'type': 'color', 'value': chcolor})
                         child.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
             dataitems_t = self.plotter_t.listDataItems()
             dataitems_f = self.plotter_f.listDataItems()
@@ -573,12 +659,11 @@ class SerialStudio(QMainWindow):
                 if len(self.chdata) <= ch:
                     self.chdata.append([])
                 if ch >= numdataitems:
-                    # Color scheme from https://sashamaps.net/docs/resources/20-colors/
-                    color = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
-                    chname = self.parameters['channel_names']["Channel_{}".format(ch)]
-                    plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
+                    chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
+                    chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
+                    plotData = pg.PlotDataItem(pen=chcolor, name=chtitle)
                     self.plotter_t.addItem(plotData)
-                    plotData = pg.PlotDataItem(pen=color[ch % len(color)], name=chname)
+                    plotData = pg.PlotDataItem(pen=chcolor, name=chtitle)
                     self.plotter_f.addItem(plotData)
 
             # set new parser config

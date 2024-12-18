@@ -20,9 +20,9 @@ Created on Sat Apr 23 02:08:23 2022
 
 from PySide6.QtWidgets import (
     QMainWindow, QApplication,
-    QStatusBar, QSplitter, QWidget, QHBoxLayout, QLabel
+    QStatusBar, QSplitter, QWidget, QHBoxLayout, QLabel, QFileDialog, QMessageBox
 )
-from PySide6.QtGui import QAction, QPixmap, QIcon, QPainter, QFont
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtCore import Qt, QTimer, QSize
 
 import pyqtgraph as pg
@@ -59,19 +59,6 @@ class ConfigParser():
             return True
         except:
             return False
-
-def create_emoji_icon(emoji, size=16):
-    """Create a QIcon from an emoji."""
-    pixmap = QPixmap(size, size)  # Create a pixmap with the specified size
-    pixmap.fill(Qt.transparent)  # Transparent background
-
-    painter = QPainter(pixmap)
-    font = QFont("Segoe UI Emoji", size)
-    painter.setFont(font)
-    painter.drawText(pixmap.rect(), Qt.AlignCenter, emoji)  # Draw emoji
-    painter.end()
-
-    return QIcon(pixmap)
 
 class SerialStudio(QMainWindow):
     appname = "Serial Studio"
@@ -397,12 +384,12 @@ class SerialStudio(QMainWindow):
         start_log_action = QAction('Start Logging', self)
         start_log_action.setStatusTip("Start logging data")
         start_log_action.setShortcut("CTRL+L")
-        start_log_action.setIcon(QIcon.fromTheme('document-save'))
+        start_log_action.setIcon(QIcon.fromTheme('media-record'))
         start_log_action.triggered.connect(self.startlogging)
         stop_log_action = QAction('Stop Logging', self)
         stop_log_action.setStatusTip("Stop logging data")
         stop_log_action.setShortcut("CTRL+K")
-        stop_log_action.setIcon(QIcon.fromTheme('document-save'))
+        stop_log_action.setIcon(QIcon.fromTheme('media-playback-stop'))
         stop_log_action.triggered.connect(self.stoplogging)
 
         # menu-bar
@@ -439,10 +426,10 @@ class SerialStudio(QMainWindow):
 
         self.labellogicon.setVisible(False)
 
-        logicon = create_emoji_icon("🔴", size=16)
-        downicon = create_emoji_icon("🟢", size=16)
-        erroricon = create_emoji_icon("❌", size=16)
-        queueicon = create_emoji_icon("🔄", size=16)
+        logicon = QIcon.fromTheme('media-record')
+        downicon = QIcon.fromTheme('go-down')
+        erroricon = QIcon.fromTheme('network-error')
+        queueicon = QIcon.fromTheme('view-refresh')
 
         self.labellogicon.setPixmap(logicon.pixmap(QSize(16, 16)))
         labeldownicon.setPixmap(downicon.pixmap(QSize(16, 16)))

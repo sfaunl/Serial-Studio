@@ -5,7 +5,7 @@ Created on Sat Apr 23 02:08:23 2022
 @brief      Serial data visualizer
 @author     Sefa Unal
 
-@version    0.2.7
+@version    0.2.8
 @date       18/12/2024
 @since		v0.1 : initial release
 @since		v0.2 : add multiplier and offset
@@ -16,6 +16,7 @@ Created on Sat Apr 23 02:08:23 2022
 @since      v0.2.5 : use new color palette
 @since      v0.2.6 : add cobs, discard bytes, value view, enable fft, plot name and color support
 @since      v0.2.7 : add log file support
+@since      v0.2.8 : add save as option for configuration file
 """
 
 from PySide6.QtWidgets import (
@@ -66,7 +67,7 @@ class ConfigParser():
 
 class SerialStudio(QMainWindow):
     appname = "Serial Studio"
-    version = "0.2.7"
+    version = "0.2.8"
 
     colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
     defaultParams = {

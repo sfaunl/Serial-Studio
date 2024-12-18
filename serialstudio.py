@@ -539,8 +539,12 @@ class SerialStudio(QMainWindow):
                 params = self.config.loadConfig(filename)
 
                 if params:
-                    if params.get('version') != self.version:
-                        msg = f"Configuration file version mismatch: {params.get('version')}. Expected: {self.version}"
+                    # version field consists of major.minor.patch fields.
+                    # if the major and minor fields are different, the configuration file is not compatible
+                    swMajor, swMinor, swPatch = self.version.split('.')
+                    cfgMajor, cfgMinor, cfgPatch = params.get('version').split('.')
+                    if swMajor != cfgMajor or swMinor != cfgMinor:
+                        msg = f"Configuration file version mismatch: {params.get('version')}. Expected: {swMajor}.{swMinor}.x"
                         self.statusBar().showMessage(msg)
                         print(msg)
                         return False

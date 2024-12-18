@@ -91,6 +91,7 @@ class SerialStudio(QMainWindow):
             'multiplier': 1
         },
         'fft': {
+            'enable': True,
             'autoscale': True,
             'showdc': False,
             'fftsize': 1024
@@ -161,6 +162,7 @@ class SerialStudio(QMainWindow):
             dict(name='Offset', type='float', value=0.0, precision=2),
         ]),
         dict(name='fftopts', title='FFT Options', type='group', children=[
+            dict(name='Enable', type='bool', value=False),
             dict(name='Autoscale', type='bool', value=True, enabled=False),
             dict(name='Show DC', type='bool', value=False),
             dict(name='NSamples', type='int', limits=[0, None], value=1024),
@@ -422,6 +424,7 @@ class SerialStudio(QMainWindow):
 
         #fftopts
         with fftopts.treeChangeBlocker():
+            fftopts.child('Enable').setValue(self.parameters['fft']['enable'])
             fftopts.child('Autoscale').setValue(self.parameters['fft']['autoscale'])
             fftopts.child('Show DC').setValue(self.parameters['fft']['showdc'])
             fftopts.child('NSamples').setValue(self.parameters['fft']['fftsize'])
@@ -605,6 +608,7 @@ class SerialStudio(QMainWindow):
         if self.debug:
             print("paramFftChanged")
         fftopts = self.settings.child('fftopts')
+        self.parameters['fft']['enable'] = fftopts.child('Enable').value()
         self.parameters['fft']['autoscale'] = fftopts.child('Autoscale').value()
         self.parameters['fft']['showdc'] = fftopts.child('Show DC').value()
         self.parameters['fft']['fftsize'] = fftopts.child('NSamples').value()
@@ -733,23 +737,27 @@ class SerialStudio(QMainWindow):
                 # update plot data
                 dataItems_t[i].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
-        # draw frequency domain plot
-        lfNSamples = self.parameters['fft']['fftsize']
-        if(len(self.chdata[0]) > lfNSamples):
-            tstart = -min(lfNSamples + 1, len(self.chdata[0]))
-            fstart = 1
-            if self.parameters['fft']['showdc'] == True:
-                fstart = 0
-            fend = (lfNSamples // 2) - 1
+        if self.parameters['fft']['enable'] == False:
+            self.glw.ci.layout.itemAt(1).setVisible(False)
+        else:
+            self.glw.ci.layout.itemAt(1).setVisible(True)
+            # draw frequency domain plot
+            lfNSamples = self.parameters['fft']['fftsize']
+            if(len(self.chdata[0]) > lfNSamples):
+                tstart = -min(lfNSamples + 1, len(self.chdata[0]))
+                fstart = 1
+                if self.parameters['fft']['showdc'] == True:
+                    fstart = 0
+                fend = (lfNSamples // 2) - 1
 
-            dataItems_f = self.plotter_f.listDataItems()
+                dataItems_f = self.plotter_f.listDataItems()
 
-            for i, ch in enumerate(activechs):
-                if i >= len(dataItems_f):
-                    continue
-                if len(dataItems_t) > i:
-                    self.Yf = fft(self.chdata[ch][tstart:tend])
-                    dataItems_f[i].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
+                for i, ch in enumerate(activechs):
+                    if i >= len(dataItems_f):
+                        continue
+                    if len(dataItems_t) > i:
+                        self.Yf = fft(self.chdata[ch][tstart:tend])
+                        dataItems_f[i].setData(self.Xf[fstart:fend], abs(self.Yf[fstart:fend]))
 
     def update_ui(self):
         if self.parser == None:

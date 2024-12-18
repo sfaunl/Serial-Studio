@@ -264,6 +264,7 @@ class SerialStudio(QMainWindow):
         self.ser = None
         self.queue = 0
         self.dataBuffer = None
+        self.Xt = []
         self.chdata = []
         self.lastPacketTime = None
 
@@ -907,6 +908,10 @@ class SerialStudio(QMainWindow):
         for ch in range(numch):
             self.chdata[ch].extend(self.dataBuffer[ch])
 
+        self.calculateXAxes()
+        self.draw_plot()
+
+    def draw_plot(self):
         # draw time domain plot
         tstart = - min(self.parameters['plotter']['buffersize'] + 1, len(self.chdata[0]))
         tend = -1
@@ -968,6 +973,9 @@ class SerialStudio(QMainWindow):
             self.labellogicon.setVisible(False)
             self.labellog.setText("")
 
+        # Update the plot to add the data to the new channels
+        self.draw_plot()
+
         # Update channel value
         if self.dataBuffer is not None:
             for i in range(self.parser.numChannels):
@@ -975,7 +983,6 @@ class SerialStudio(QMainWindow):
                     break
                 if len(self.dataBuffer[i]) > 0:
                     self.channels.child("Channel_{0}".format(i)).child('Value').setValue(self.dataBuffer[i][-1])
-        self.calculateXAxes()
 
 def main():
     app = QApplication(sys.argv)

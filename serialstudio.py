@@ -547,15 +547,13 @@ class SerialStudio(QMainWindow):
                     buttonDeselectAll.sigActivated.connect(self.deselectAll)
                     buttonSelectAll = channelopts.addChild({'name': "Select All", 'type': 'action', 'visible': False})
                     buttonSelectAll.sigActivated.connect(self.selectAll)
+                childcount = len(channelopts.children()) - 2
 
                 colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
                 for ch in range(max(numchan, childcount)):
                     chtitle = self.parameters['channel_names']["Channel_{}".format(ch)]
                     if ch >= numchan:
-                        try:
-                            channelopts.removeChild(channelopts.child(chtitle))
-                        except:
-                            pass
+                        channelopts.removeChild(channelopts.child(("Channel_{0}".format(ch))))
                     elif ch >= childcount:
                         child = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
                         chtitle = child.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})

@@ -863,7 +863,7 @@ class SerialStudio(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    window = SerialStudio()
+    window = SerialStudio(debug=False)
     sys.exit(app.exec())
 
 if __name__ == '__main__':

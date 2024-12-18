@@ -5,7 +5,7 @@ Created on Sat Apr 23 02:08:23 2022
 @brief      Serial data visualizer
 @author     Sefa Unal
 
-@version    0.2.6
+@version    0.2.7
 @date       18/12/2024
 @since		v0.1 : initial release
 @since		v0.2 : add multiplier and offset
@@ -15,6 +15,7 @@ Created on Sat Apr 23 02:08:23 2022
 @since      v0.2.4 : add crc and channel name support
 @since      v0.2.5 : use new color palette
 @since      v0.2.6 : add cobs, discard bytes, value view, enable fft, plot name and color support
+@since      v0.2.7 : add log file support
 """
 
 from PySide6.QtWidgets import (
@@ -74,7 +75,7 @@ def create_emoji_icon(emoji, size=16):
 
 class SerialStudio(QMainWindow):
     appname = "Serial Studio"
-    version = "0.2.6"
+    version = "0.2.7"
 
     colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
     defaultParams = {
@@ -87,6 +88,10 @@ class SerialStudio(QMainWindow):
         },
         'parser': {
             'encoding': 0,
+            'fields': {
+                '0': {'name': 'Field_0', 'type': 'static', 'size': 1, 'datatype': 'int8', 'endianness': 'little'},
+
+            },
             'startbyte': [0xAA, 0xBB],
             'discardbytes': 0,
             'endbyte': [],
@@ -227,6 +232,23 @@ class SerialStudio(QMainWindow):
         ]),
         dict(name='parseropts', title='Parser Options', type='group', children=[
             dict(name='Encoding', type='list', limits={'NONE': 0, 'COBS': 1}, value=0), #HDLC, COBS
+            #dict(name='Fields', type='group', limits={'NONE': 0, 'COBS': 1}, value=0, children=[
+            #    dict(name='Add new field', type='action'),
+            #    dict(name='Field_0', type='group', value='aa', children=[
+            #        dict(name='Remove', type='action'),
+            #        dict(name='Move Up', type='action'),
+            #        dict(name='Move Down', type='action'),
+            #        dict(name='Name', type='str', value='Field_0'),
+            #        dict(name='Type', type='list', limits={'STATIC': 0, 'DON\'T CARE': 1, 'DYNAMIC': 1}, value=0),
+            #        dict(name='Data Size', type='int', limits=[0, 255], value=1),
+            #        dict(name='Interpreted Type', type='list', limits={'INT8': 0, 'UINT8': 1,
+            #                                               'INT16': 2, 'UINT16': 3,
+            #                                               'INT32': 4, 'UINT32': 5,
+            #                                               'INT64': 6, 'UINT64': 7,
+            #                                               'FLOAT': 8, 'DOUBLE': 9}, value=4),
+            #        dict(name='Endianness', type='list', limits={'LITTLE': 0, 'BIG': 1}, value=0),
+            #    ]),
+            #]),
             dict(name='StartByte', type='str', value="AA BB"),
             dict(name='DiscardBytes', type='int', limits=[0, 255], value=0),
             dict(name='EndByte', type='str', value=""),
@@ -281,6 +303,15 @@ class SerialStudio(QMainWindow):
                                       aDataType=self.parameters['parser']['datatype'],
                                       aNumChannel=self.parameters['parser']['channel'],
                                       aEndianness=self.parameters['parser']['endianness'])
+
+        # self.parser2 = sp.SerialParser2(aEncoding=self.parameters['parser']['encoding'],
+        #                              aStartSequence=self.parameters['parser']['startbyte'],
+        #                              aDiscardBytes=self.parameters['parser']['discardbytes'],
+        #                              aEndSequence=self.parameters['parser']['endbyte'],
+        #                              aCheckSum=self.parameters['parser']['checksum'],
+        #                              aDataType=self.parameters['parser']['datatype'],
+        #                              aNumChannel=self.parameters['parser']['channel'],
+        #                              aEndianness=self.parameters['parser']['endianness'])
 
         configLoaded = self.loadconfig()
         if configLoaded == False:

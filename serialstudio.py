@@ -271,7 +271,7 @@ class SerialStudio(QMainWindow):
             dict(name='Endianness', type='list', limits={'LITTLE': 0, 'BIG': 1}, value=0),
             dict(name='Expected', type='str', value='', readonly=True),
         ]),
-        dict(name='plotopts', title='Settings', type='group', children=[
+        dict(name='plotopts', title='Plot Settings', type='group', children=[
             dict(name='plotteropts', title='Plotter Options', type='group', children=[
                 dict(name='Autoscale', type='bool', value=True, enabled=False),
                 dict(name='Plot Length', type='int', limits=[0, None], step=1000, value=4096),
@@ -356,9 +356,11 @@ class SerialStudio(QMainWindow):
         self.paramFreqSer = self.paramPlot.child('fftopts')
 
         settingstree = ptree.ParameterTree(showHeader=False)
-        settingstree.setParameters(self.paramSettings)
+        settingstree.addParameters(self.paramSource)
+        settingstree.addParameters(self.paramParser)
+        settingstree.addParameters(self.paramPlot)
         channeltree = ptree.ParameterTree(showHeader=False)
-        channeltree.setParameters(self.paramChannels)
+        channeltree.addParameters(self.paramChannels)
 
         self.paramChannels.sigTreeStateChanged.connect(self.paramChannelChanged)
         self.paramSource.sigTreeStateChanged.connect(self.paramSerialChanged)
@@ -488,7 +490,7 @@ class SerialStudio(QMainWindow):
         vsplitter = QSplitter(Qt.Vertical)
         vsplitter.addWidget(settingstree)
         vsplitter.addWidget(channeltree)
-        channeltree.setMinimumHeight(250)
+        channeltree.setMinimumHeight(300)
 
         splitter = QSplitter(self)
         splitter.addWidget(vsplitter)

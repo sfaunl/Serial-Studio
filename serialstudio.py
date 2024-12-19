@@ -797,31 +797,32 @@ class SerialStudio(QMainWindow):
 
             # update the port details
             selectedPort = None
-            for port in self.serialPorts:
-                if port.device == selectedPortName:
-                    selectedPort = port
-            if selectedPort is not None:
-                seropts.child('Device Details').child('Device').setValue(selectedPort.device)
-                seropts.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
-                seropts.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
-                seropts.child('Device Details').child('Product').setValue(selectedPort.product)
-                seropts.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
-                seropts.child('Device Details').child('Description').setValue(selectedPort.description)
-                if selectedPort.vid is not None:
-                    seropts.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
-                    seropts.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
+            if self.serialPorts is not None:
+                for port in self.serialPorts:
+                    if port.device == selectedPortName:
+                        selectedPort = port
+                if selectedPort is not None:
+                    seropts.child('Device Details').child('Device').setValue(selectedPort.device)
+                    seropts.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
+                    seropts.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
+                    seropts.child('Device Details').child('Product').setValue(selectedPort.product)
+                    seropts.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
+                    seropts.child('Device Details').child('Description').setValue(selectedPort.description)
+                    if selectedPort.vid is not None:
+                        seropts.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
+                        seropts.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
+                    else:
+                        seropts.child('Device Details').child('VID').setValue('')
+                        seropts.child('Device Details').child('PID').setValue('')
                 else:
+                    seropts.child('Device Details').child('Device').setValue('')
+                    seropts.child('Device Details').child('Subsystem').setValue('')
+                    seropts.child('Device Details').child('Manufacturer').setValue('')
+                    seropts.child('Device Details').child('Product').setValue('')
+                    seropts.child('Device Details').child('Serial').setValue('')
+                    seropts.child('Device Details').child('Description').setValue('')
                     seropts.child('Device Details').child('VID').setValue('')
                     seropts.child('Device Details').child('PID').setValue('')
-            else:
-                seropts.child('Device Details').child('Device').setValue('')
-                seropts.child('Device Details').child('Subsystem').setValue('')
-                seropts.child('Device Details').child('Manufacturer').setValue('')
-                seropts.child('Device Details').child('Product').setValue('')
-                seropts.child('Device Details').child('Serial').setValue('')
-                seropts.child('Device Details').child('Description').setValue('')
-                seropts.child('Device Details').child('VID').setValue('')
-                seropts.child('Device Details').child('PID').setValue('')
 
             self.parameters['conn']['baudrate'] = seropts.child('Uart Settings').child('BaudRate').value()
             self.parameters['conn']['databits'] = seropts.child('Uart Settings').child('Data Bits').value()
@@ -1064,6 +1065,8 @@ class SerialStudio(QMainWindow):
 
     def draw_plot(self):
         # draw time domain plot
+        if self.chdata == []:
+            return
         tstart = - min(self.parameters['plotter']['buffersize'] + 1, len(self.chdata[0]))
         tend = -1
 
@@ -1084,7 +1087,12 @@ class SerialStudio(QMainWindow):
                     self.chdata[ch][tstart:tend] = [0] * numZeros + self.chdata[ch][tstart:tend]
 
                 # update plot data
-                dataItems_t[i].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
+
+                # First check if the X and Y arrays are the same length
+                if len(self.Xt[0:-tstart-1]) != len(self.chdata[ch][tstart:tend]):
+                    print(f"Error: Xt: {len(self.Xt[0:-tstart-1])}, Y: {len(self.chdata[ch][tstart:tend])}")
+                else:
+                    dataItems_t[i].setData(self.Xt[0:-tstart-1], self.chdata[ch][tstart:tend])
 
         # draw frequency domain plot
         if self.parameters['fft']['enable'] == True:

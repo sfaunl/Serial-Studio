@@ -747,10 +747,10 @@ class SerialStudio(QMainWindow):
                     isactive = channelopts.child("Channel_{}".format(ch)).value()
                     if isactive == True:
                         # Add the active plot channels
-                        chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
-                        plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
+                        _chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
+                        plotData = pg.PlotDataItem(pen=_chColor, name=chTitle)
                         self.plotter_t.addItem(plotData)
-                        plotData = pg.PlotDataItem(pen=chColor, name=chTitle)
+                        plotData = pg.PlotDataItem(pen=_chColor, name=chTitle)
                         self.plotter_f.addItem(plotData)
 
                 self.parameters['channel_config']["Channel_{}".format(ch)]['name'] = chTitle

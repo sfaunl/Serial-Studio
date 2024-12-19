@@ -773,10 +773,12 @@ class SerialStudio(QMainWindow):
         seropts = self.sources.child('serialopts')
         with seropts.treeChangeBlocker():
             customport = seropts['Custom Port']
+            selectedPortName = None
             if customport == True:
                 seropts.child('PortStr').setOpts(visible=True)
                 seropts.child('PortList').setOpts(visible=False)
                 self.parameters['conn']['portname'] = seropts.child('PortStr').value()
+                selectedPortName = self.parameters['conn']['portname']
             else:
                 self.serialPorts = lp.comports()
                 ports = {}
@@ -789,21 +791,35 @@ class SerialStudio(QMainWindow):
                 seropts.child('PortList').setOpts(visible=True)
                 seropts.child('PortList').setOpts(limits=ports)
                 self.parameters['conn']['portname'] = seropts.child('PortList').value()
+                selectedPortName = self.parameters['conn']['portname']
 
-                # update the port details
-                selectedPort = None
-                for port in self.serialPorts:
-                    if port.device == self.parameters['conn']['portname']:
-                        selectedPort = port
-                if selectedPort is not None:
-                    seropts.child('Device Details').child('Device').setValue(selectedPort.device)
-                    seropts.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
-                    seropts.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
-                    seropts.child('Device Details').child('Product').setValue(selectedPort.product)
-                    seropts.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
-                    seropts.child('Device Details').child('Description').setValue(selectedPort.description)
+            # update the port details
+            selectedPort = None
+            for port in self.serialPorts:
+                if port.device == selectedPortName:
+                    selectedPort = port
+            if selectedPort is not None:
+                seropts.child('Device Details').child('Device').setValue(selectedPort.device)
+                seropts.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
+                seropts.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
+                seropts.child('Device Details').child('Product').setValue(selectedPort.product)
+                seropts.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
+                seropts.child('Device Details').child('Description').setValue(selectedPort.description)
+                if selectedPort.vid is not None:
                     seropts.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
                     seropts.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
+                else:
+                    seropts.child('Device Details').child('VID').setValue('')
+                    seropts.child('Device Details').child('PID').setValue('')
+            else:
+                seropts.child('Device Details').child('Device').setValue('')
+                seropts.child('Device Details').child('Subsystem').setValue('')
+                seropts.child('Device Details').child('Manufacturer').setValue('')
+                seropts.child('Device Details').child('Product').setValue('')
+                seropts.child('Device Details').child('Serial').setValue('')
+                seropts.child('Device Details').child('Description').setValue('')
+                seropts.child('Device Details').child('VID').setValue('')
+                seropts.child('Device Details').child('PID').setValue('')
 
             self.parameters['conn']['baudrate'] = seropts.child('Uart Settings').child('BaudRate').value()
             self.parameters['conn']['databits'] = seropts.child('Uart Settings').child('Data Bits').value()

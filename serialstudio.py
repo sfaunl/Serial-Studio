@@ -213,28 +213,30 @@ class SerialStudio(QMainWindow):
     }
 
     settings_children = [
-        dict(name='connect', title='Connect', type='action', children=[
-            dict(name='connected', title='Connected', type='str', value='', readonly=True, visible=False),
-        ]),
-        dict(name='serialopts', title='Connection', type='group', children=[
-            dict(name='Custom Port', type='bool', value=False, enabled=True),
-            dict(name='PortList', title='Port', type='list', visible=True),
-            dict(name='PortStr', title='Port', type='str', value="/dev/pts/2", visible=False),
-            dict(name='Uart Settings', type='group', expanded=True, children=[
-                dict(name='BaudRate', type='int', limits=[0, None], value=115200),
-                dict(name='Data Bits', type='list', limits=[5, 6, 7, 8], value=8),
-                dict(name='Stop Bits', type='list', limits=[1, 1.5, 2], value=1),
-                dict(name='Parity', type='list', limits={'None': 'N', 'Even': 'E', 'Odd': 'O', 'Mark': 'M', 'Space': 'S'}, value='N'),
+        dict(name='sourcesopts', title='Source', type='group', children=[
+            dict(name='connect', title='Connect', type='action', children=[
+                dict(name='connected', title='Connected', type='str', value='', readonly=True, visible=False),
             ]),
-            dict(name='Device Details', type='group', expanded=False, children=[
-                dict(name='Device', type='str', value='', readonly=True),
-                dict(name='Subsystem', type='str', value='', readonly=True),
-                dict(name='Manufacturer', type='str', value='', readonly=True),
-                dict(name='Product', type='str', value='', readonly=True),
-                dict(name='Serial', type='str', value='', readonly=True),
-                dict(name='Description', type='str', value='', readonly=True),
-                dict(name='VID', type='str', value='', readonly=True),
-                dict(name='PID', type='str', value='', readonly=True),
+            dict(name='serialopts', title='Connection', type='group', children=[
+                dict(name='Custom Port', type='bool', value=False, enabled=True),
+                dict(name='PortList', title='Port', type='list', visible=True),
+                dict(name='PortStr', title='Port', type='str', value="/dev/pts/2", visible=False),
+                dict(name='Uart Settings', type='group', expanded=True, children=[
+                    dict(name='BaudRate', type='int', limits=[0, None], value=115200),
+                    dict(name='Data Bits', type='list', limits=[5, 6, 7, 8], value=8),
+                    dict(name='Stop Bits', type='list', limits=[1, 1.5, 2], value=1),
+                    dict(name='Parity', type='list', limits={'None': 'N', 'Even': 'E', 'Odd': 'O', 'Mark': 'M', 'Space': 'S'}, value='N'),
+                ]),
+                dict(name='Device Details', type='group', expanded=False, children=[
+                    dict(name='Device', type='str', value='', readonly=True),
+                    dict(name='Subsystem', type='str', value='', readonly=True),
+                    dict(name='Manufacturer', type='str', value='', readonly=True),
+                    dict(name='Product', type='str', value='', readonly=True),
+                    dict(name='Serial', type='str', value='', readonly=True),
+                    dict(name='Description', type='str', value='', readonly=True),
+                    dict(name='VID', type='str', value='', readonly=True),
+                    dict(name='PID', type='str', value='', readonly=True),
+                ]),
             ]),
         ]),
         dict(name='parseropts', title='Parser Options', type='group', children=[
@@ -342,20 +344,26 @@ class SerialStudio(QMainWindow):
 
     def initUI(self):
         # Parameter tree object
-        self.sources = ptree.Parameter.create(name='Source', type='group', children=self.settings_children)
-        self.channels = ptree.Parameter.create(name='Channels', type='group')
+        self.paramSettings = ptree.Parameter.create(name='Settings', type='group', children=self.settings_children)
+        self.paramChannels = ptree.Parameter.create(name='Channels', type='group')
+        self.paramSource = self.paramSettings.child('sourcesopts')
+        self.paramSerial = self.paramSource.child('serialopts')
+        self.paramParser = self.paramSettings.child('parseropts')
+        self.paramPlot   = self.paramSettings.child('plotopts')
+        self.paramTimeSer = self.paramPlot.child('plotteropts')
+        self.paramFreqSer = self.paramPlot.child('fftopts')
 
-        sourcetree = ptree.ParameterTree(showHeader=False)
-        sourcetree.setParameters(self.sources)
+        settingstree = ptree.ParameterTree(showHeader=False)
+        settingstree.setParameters(self.paramSettings)
         channeltree = ptree.ParameterTree(showHeader=False)
-        channeltree.setParameters(self.channels)
+        channeltree.setParameters(self.paramChannels)
 
-        self.channels.sigTreeStateChanged.connect(self.paramChannelChanged)
-        self.sources.child('serialopts').sigTreeStateChanged.connect(self.paramSerialChanged)
-        self.sources.child('parseropts').sigTreeStateChanged.connect(self.paramParserChanged)
-        self.sources.child('plotopts').child('plotteropts').sigTreeStateChanged.connect(self.paramPlotterChanged)
-        self.sources.child('plotopts').child('fftopts').sigTreeStateChanged.connect(self.paramFftChanged)
-        self.sources.child('connect').sigActivated.connect(self.serial_connect)
+        self.paramChannels.sigTreeStateChanged.connect(self.paramChannelChanged)
+        self.paramSource.sigTreeStateChanged.connect(self.paramSerialChanged)
+        self.paramParser.sigTreeStateChanged.connect(self.paramParserChanged)
+        self.paramTimeSer.sigTreeStateChanged.connect(self.paramPlotterChanged)
+        self.paramFreqSer.sigTreeStateChanged.connect(self.paramFftChanged)
+        self.paramSource.child('connect').sigActivated.connect(self.serial_connect)
 
         # plotter object
         self.glw = pg.GraphicsLayoutWidget()
@@ -476,7 +484,7 @@ class SerialStudio(QMainWindow):
 
         # place widgets in main window
         vsplitter = QSplitter(Qt.Vertical)
-        vsplitter.addWidget(sourcetree)
+        vsplitter.addWidget(settingstree)
         vsplitter.addWidget(channeltree)
         channeltree.setMinimumHeight(250)
 
@@ -642,62 +650,57 @@ class SerialStudio(QMainWindow):
         self.logfilehandle.close()
 
     def loadParameters(self):
-        seropts = self.sources.child('serialopts')
-        parseropts = self.sources.child('parseropts')
-        plotteropts = self.sources.child('plotopts').child('plotteropts')
-        fftopts = self.sources.child('plotopts').child('fftopts')
-
         #seropts
-        with seropts.treeChangeBlocker():
-            seropts.child('Custom Port').setValue(True)
-            seropts.child('PortStr').setValue(self.parameters['conn']['portname'])
-            seropts.child('Uart Settings').child('BaudRate').setValue(self.parameters['conn']['baudrate'])
-            seropts.child('Uart Settings').child('Data Bits').setValue(self.parameters['conn']['databits'])
-            seropts.child('Uart Settings').child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
-            seropts.child('Uart Settings').child('Parity').setValue(self.parameters['conn']['parity'])
+        with self.paramSerial.treeChangeBlocker():
+            self.paramSerial.child('Custom Port').setValue(True)
+            self.paramSerial.child('PortStr').setValue(self.parameters['conn']['portname'])
+            self.paramSerial.child('Uart Settings').child('BaudRate').setValue(self.parameters['conn']['baudrate'])
+            self.paramSerial.child('Uart Settings').child('Data Bits').setValue(self.parameters['conn']['databits'])
+            self.paramSerial.child('Uart Settings').child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
+            self.paramSerial.child('Uart Settings').child('Parity').setValue(self.parameters['conn']['parity'])
 
         #parseropts
-        with parseropts.treeChangeBlocker():
-            parseropts.child('Encoding').setValue(self.parameters['parser']['encoding'])
+        with self.paramParser.treeChangeBlocker():
+            self.paramParser.child('Encoding').setValue(self.parameters['parser']['encoding'])
             startbytelist = self.parameters['parser']['startbyte']
             hexstr = ""
             for byte in startbytelist:
                 hexstr += format(byte, '02X') + " "
-            parseropts.child('StartByte').setValue(hexstr)
-            parseropts.child('DiscardBytes').setValue(self.parameters['parser']['discardbytes'])
+            self.paramParser.child('StartByte').setValue(hexstr)
+            self.paramParser.child('DiscardBytes').setValue(self.parameters['parser']['discardbytes'])
 
             endbytelist = self.parameters['parser']['endbyte']
             hexstr = ""
             for byte in endbytelist:
                 hexstr += format(byte, '02X') + " "
-            parseropts.child('EndByte').setValue(hexstr)
-            parseropts.child('Channels').setValue(self.parameters['parser']['channel'])
-            parseropts.child('CheckSum').setValue(self.parameters['parser']['checksum'])
-            parseropts.child('DataType').setValue(self.parameters['parser']['datatype'])
-            parseropts.child('Endianness').setValue(self.parameters['parser']['endianness'])
+            self.paramParser.child('EndByte').setValue(hexstr)
+            self.paramParser.child('Channels').setValue(self.parameters['parser']['channel'])
+            self.paramParser.child('CheckSum').setValue(self.parameters['parser']['checksum'])
+            self.paramParser.child('DataType').setValue(self.parameters['parser']['datatype'])
+            self.paramParser.child('Endianness').setValue(self.parameters['parser']['endianness'])
 
         #plotteropts
-        with plotteropts.treeChangeBlocker():
-            plotteropts.child('Autoscale').setValue(self.parameters['plotter']['autoscale'])
-            plotteropts.child('Plot Length').setValue(self.parameters['plotter']['buffersize'])
-            plotteropts.child('Multiplier').setValue(self.parameters['plotter']['multiplier'])
-            plotteropts.child('Offset').setValue(self.parameters['plotter']['offset'])
+        with self.paramTimeSer.treeChangeBlocker():
+            self.paramTimeSer.child('Autoscale').setValue(self.parameters['plotter']['autoscale'])
+            self.paramTimeSer.child('Plot Length').setValue(self.parameters['plotter']['buffersize'])
+            self.paramTimeSer.child('Multiplier').setValue(self.parameters['plotter']['multiplier'])
+            self.paramTimeSer.child('Offset').setValue(self.parameters['plotter']['offset'])
 
         #fftopts
-        with fftopts.treeChangeBlocker():
-            fftopts.child('Enable').setValue(self.parameters['fft']['enable'])
-            fftopts.child('Autoscale').setValue(self.parameters['fft']['autoscale'])
-            fftopts.child('Show DC').setValue(self.parameters['fft']['showdc'])
-            fftopts.child('NSamples').setValue(self.parameters['fft']['fftsize'])
+        with self.paramFreqSer.treeChangeBlocker():
+            self.paramFreqSer.child('Enable').setValue(self.parameters['fft']['enable'])
+            self.paramFreqSer.child('Autoscale').setValue(self.parameters['fft']['autoscale'])
+            self.paramFreqSer.child('Show DC').setValue(self.parameters['fft']['showdc'])
+            self.paramFreqSer.child('NSamples').setValue(self.parameters['fft']['fftsize'])
 
         #channelopts
-        with self.channels.treeChangeBlocker():
+        with self.paramChannels.treeChangeBlocker():
             for ch in range(self.parameters['parser']['channel']):
                 chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
                 chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
-                numEntries = len(self.channels.childs) - 2 # subtract 2 for the select all and deselect all entries
+                numEntries = len(self.paramChannels.childs) - 2 # subtract 2 for the select all and deselect all entries
                 if numEntries > ch:
-                    chEntry = self.channels.child("Channel_{}".format(ch))
+                    chEntry = self.paramChannels.child("Channel_{}".format(ch))
                     chEntry.setValue(True)
                     chEntry.child('Name').setValue(chtitle)
                     chEntry.child('Color').setValue(chcolor)
@@ -706,8 +709,7 @@ class SerialStudio(QMainWindow):
         if self.debug:
             print("paramChannelChanged")
 
-        channelopts = self.channels
-        with channelopts.treeChangeBlocker():
+        with self.paramChannels.treeChangeBlocker():
             # update active/inactive channels variable
             activechs = []
             inactivechs = []
@@ -718,7 +720,7 @@ class SerialStudio(QMainWindow):
 
             # Update number of active/inactive channels
             for ch in range(numchan):
-                isactive = channelopts.child("Channel_{}".format(ch)).value()
+                isactive = self.paramChannels.child("Channel_{}".format(ch)).value()
                 if isactive == True:
                     activechs.append(ch)
                 else:
@@ -726,10 +728,10 @@ class SerialStudio(QMainWindow):
 
             for ch in range(numchan):
                 # Update the title of the plot
-                rowTitle = channelopts.child("Channel_{}".format(ch)).opts['title']
-                chTitle = channelopts.child("Channel_{}".format(ch)).child('Name').value()
-                chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value().name()
-                channelopts.child("Channel_{}".format(ch)).setOpts(title=chTitle)
+                rowTitle = self.paramChannels.child("Channel_{}".format(ch)).opts['title']
+                chTitle  = self.paramChannels.child("Channel_{}".format(ch)).child('Name').value()
+                chColor  = self.paramChannels.child("Channel_{}".format(ch)).child('Color').value().name()
+                self.paramChannels.child("Channel_{}".format(ch)).setOpts(title=chTitle)
 
                 # Check if the channel title and color has been updated
                 chTitleParam = self.parameters['channel_config'][f'Channel_{ch}']['name']
@@ -746,10 +748,10 @@ class SerialStudio(QMainWindow):
                         self.plotter_t.removeItem(dataitems_t[ch])
                         self.plotter_f.removeItem(dataitems_f[ch])
 
-                    isactive = channelopts.child("Channel_{}".format(ch)).value()
+                    isactive = self.paramChannels.child("Channel_{}".format(ch)).value()
                     if isactive == True:
                         # Add the active plot channels
-                        _chColor = channelopts.child("Channel_{}".format(ch)).child('Color').value()
+                        _chColor = self.paramChannels.child("Channel_{}".format(ch)).child('Color').value()
                         plotData = pg.PlotDataItem(pen=_chColor, name=chTitle)
                         self.plotter_t.addItem(plotData)
                         plotData = pg.PlotDataItem(pen=_chColor, name=chTitle)
@@ -759,11 +761,11 @@ class SerialStudio(QMainWindow):
                 self.parameters['channel_config']["Channel_{}".format(ch)]['color'] = chColor
 
             if len(activechs) == 0:
-                self.channels.child("Select All").setOpts(visible=True)
-                self.channels.child("Deselect All").setOpts(visible=False)
+                self.paramChannels.child("Select All").setOpts(visible=True)
+                self.paramChannels.child("Deselect All").setOpts(visible=False)
             else:
-                self.channels.child("Select All").setOpts(visible=False)
-                self.channels.child("Deselect All").setOpts(visible=True)
+                self.paramChannels.child("Select All").setOpts(visible=False)
+                self.paramChannels.child("Deselect All").setOpts(visible=True)
 
             self.parameters['channels']['activechs'] = activechs
             self.parameters['channels']['inactivechs'] = inactivechs
@@ -772,14 +774,13 @@ class SerialStudio(QMainWindow):
         if self.debug:
             print("paramSerialChanged")
 
-        seropts = self.sources.child('serialopts')
-        with seropts.treeChangeBlocker():
-            customport = seropts['Custom Port']
+        with self.paramSerial.treeChangeBlocker():
+            customport = self.paramSerial['Custom Port']
             selectedPortName = None
             if customport == True:
-                seropts.child('PortStr').setOpts(visible=True)
-                seropts.child('PortList').setOpts(visible=False)
-                self.parameters['conn']['portname'] = seropts.child('PortStr').value()
+                self.paramSerial.child('PortStr').setOpts(visible=True)
+                self.paramSerial.child('PortList').setOpts(visible=False)
+                self.parameters['conn']['portname'] = self.paramSerial.child('PortStr').value()
                 selectedPortName = self.parameters['conn']['portname']
             else:
                 self.serialPorts = lp.comports()
@@ -789,10 +790,10 @@ class SerialStudio(QMainWindow):
                     if port.product is not None:
                         ports[descstr] = port.device
 
-                seropts.child('PortStr').setOpts(visible=False)
-                seropts.child('PortList').setOpts(visible=True)
-                seropts.child('PortList').setOpts(limits=ports)
-                self.parameters['conn']['portname'] = seropts.child('PortList').value()
+                self.paramSerial.child('PortStr').setOpts(visible=False)
+                self.paramSerial.child('PortList').setOpts(visible=True)
+                self.paramSerial.child('PortList').setOpts(limits=ports)
+                self.parameters['conn']['portname'] = self.paramSerial.child('PortList').value()
                 selectedPortName = self.parameters['conn']['portname']
 
             # update the port details
@@ -802,77 +803,75 @@ class SerialStudio(QMainWindow):
                     if port.device == selectedPortName:
                         selectedPort = port
                 if selectedPort is not None:
-                    seropts.child('Device Details').child('Device').setValue(selectedPort.device)
-                    seropts.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
-                    seropts.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
-                    seropts.child('Device Details').child('Product').setValue(selectedPort.product)
-                    seropts.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
-                    seropts.child('Device Details').child('Description').setValue(selectedPort.description)
+                    self.paramSerial.child('Device Details').child('Device').setValue(selectedPort.device)
+                    self.paramSerial.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
+                    self.paramSerial.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
+                    self.paramSerial.child('Device Details').child('Product').setValue(selectedPort.product)
+                    self.paramSerial.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
+                    self.paramSerial.child('Device Details').child('Description').setValue(selectedPort.description)
                     if selectedPort.vid is not None:
-                        seropts.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
-                        seropts.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
+                        self.paramSerial.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
+                        self.paramSerial.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
                     else:
-                        seropts.child('Device Details').child('VID').setValue('')
-                        seropts.child('Device Details').child('PID').setValue('')
+                        self.paramSerial.child('Device Details').child('VID').setValue('')
+                        self.paramSerial.child('Device Details').child('PID').setValue('')
                 else:
-                    seropts.child('Device Details').child('Device').setValue('')
-                    seropts.child('Device Details').child('Subsystem').setValue('')
-                    seropts.child('Device Details').child('Manufacturer').setValue('')
-                    seropts.child('Device Details').child('Product').setValue('')
-                    seropts.child('Device Details').child('Serial').setValue('')
-                    seropts.child('Device Details').child('Description').setValue('')
-                    seropts.child('Device Details').child('VID').setValue('')
-                    seropts.child('Device Details').child('PID').setValue('')
+                    self.paramSerial.child('Device Details').child('Device').setValue('')
+                    self.paramSerial.child('Device Details').child('Subsystem').setValue('')
+                    self.paramSerial.child('Device Details').child('Manufacturer').setValue('')
+                    self.paramSerial.child('Device Details').child('Product').setValue('')
+                    self.paramSerial.child('Device Details').child('Serial').setValue('')
+                    self.paramSerial.child('Device Details').child('Description').setValue('')
+                    self.paramSerial.child('Device Details').child('VID').setValue('')
+                    self.paramSerial.child('Device Details').child('PID').setValue('')
 
-            self.parameters['conn']['baudrate'] = seropts.child('Uart Settings').child('BaudRate').value()
-            self.parameters['conn']['databits'] = seropts.child('Uart Settings').child('Data Bits').value()
-            self.parameters['conn']['stopbits'] = seropts.child('Uart Settings').child('Stop Bits').value()
-            self.parameters['conn']['parity']   = seropts.child('Uart Settings').child('Parity').value()
+            self.parameters['conn']['baudrate'] = self.paramSerial.child('Uart Settings').child('BaudRate').value()
+            self.parameters['conn']['databits'] = self.paramSerial.child('Uart Settings').child('Data Bits').value()
+            self.parameters['conn']['stopbits'] = self.paramSerial.child('Uart Settings').child('Stop Bits').value()
+            self.parameters['conn']['parity']   = self.paramSerial.child('Uart Settings').child('Parity').value()
 
     def deselectAll(self):
         for ch in range(self.parameters['parser']['channel']):
-            self.channels.child("Channel_{}".format(ch)).setValue(False)
+            self.paramChannels.child("Channel_{}".format(ch)).setValue(False)
 
     def selectAll(self):
         for ch in range(self.parameters['parser']['channel']):
-            self.channels.child("Channel_{}".format(ch)).setValue(True)
+            self.paramChannels.child("Channel_{}".format(ch)).setValue(True)
 
     def paramParserChanged(self):
         if self.debug:
             print("paramParserChanged")
 
-        parseropts = self.sources.child('parseropts')
-        with parseropts.treeChangeBlocker():
-            self.parameters['parser']['encoding'] = parseropts.child('Encoding').value()
-            startByteStr = parseropts.child('StartByte').value()
+        with self.paramParser.treeChangeBlocker():
+            self.parameters['parser']['encoding'] = self.paramParser.child('Encoding').value()
+            startByteStr = self.paramParser.child('StartByte').value()
             self.parameters['parser']['startbyte'] = list(bytearray.fromhex(startByteStr.replace(" ", "")))
-            self.parameters['parser']['discardbytes'] = parseropts.child('DiscardBytes').value()
-            endByteStr = parseropts.child('EndByte').value()
+            self.parameters['parser']['discardbytes'] = self.paramParser.child('DiscardBytes').value()
+            endByteStr = self.paramParser.child('EndByte').value()
             self.parameters['parser']['endbyte'] = list(bytearray.fromhex(endByteStr.replace(" ", "")))
-            numchan = parseropts.child('Channels').value()
+            numchan = self.paramParser.child('Channels').value()
             self.parameters['parser']['channel'] = numchan
-            self.parameters['parser']['checksum'] = parseropts.child('CheckSum').value()
-            self.parameters['parser']['datatype'] = parseropts.child('DataType').value()
-            self.parameters['parser']['endianness'] = parseropts.child('Endianness').value()
+            self.parameters['parser']['checksum'] = self.paramParser.child('CheckSum').value()
+            self.parameters['parser']['datatype'] = self.paramParser.child('DataType').value()
+            self.parameters['parser']['endianness'] = self.paramParser.child('Endianness').value()
 
             # add/remove channel entries in parameter tree
-            channelopts = self.channels
-            with channelopts.treeChangeBlocker():
-                childcount = len(channelopts.children())
+            with self.paramChannels.treeChangeBlocker():
+                childcount = len(self.paramChannels.children())
                 if childcount == 0:
-                    buttonDeselectAll = channelopts.addChild({'name': "Deselect All", 'type': 'action', 'visible': True})
+                    buttonDeselectAll = self.paramChannels.addChild({'name': "Deselect All", 'type': 'action', 'visible': True})
+                    buttonSelectAll   = self.paramChannels.addChild({'name': "Select All", 'type': 'action', 'visible': False})
                     buttonDeselectAll.sigActivated.connect(self.deselectAll)
-                    buttonSelectAll = channelopts.addChild({'name': "Select All", 'type': 'action', 'visible': False})
                     buttonSelectAll.sigActivated.connect(self.selectAll)
-                childcount = len(channelopts.children()) - 2
+                childcount = len(self.paramChannels.children()) - 2
 
                 for ch in range(max(numchan, childcount)):
                     chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
                     chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
                     if ch >= numchan:
-                        channelopts.removeChild(channelopts.child(("Channel_{0}".format(ch))))
+                        self.paramChannels.removeChild(self.paramChannels.child(("Channel_{0}".format(ch))))
                     elif ch >= childcount:
-                        newChannel = channelopts.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
+                        newChannel = self.paramChannels.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
                         newChannel.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
                         newChannel.addChild({'name': 'Color', 'type': 'color', 'value': chcolor})
                         newChannel.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
@@ -905,29 +904,28 @@ class SerialStudio(QMainWindow):
                                         aEndianness=self.parameters['parser']['endianness'])
 
             expectedStr = self.parser.getExpected()
-            parseropts.child('Expected').setValue(expectedStr)
+            self.paramParser.child('Expected').setValue(expectedStr)
 
     def paramPlotterChanged(self):
         if self.debug:
             print("paramPlotterChanged")
-        plotteropts = self.sources.child('plotopts').child('plotteropts')
-        self.parameters['plotter']['autoscale'] = plotteropts.child('Autoscale').value()
-        self.parameters['plotter']['buffersize'] = plotteropts.child('Plot Length').value()
-        self.parameters['plotter']['offset'] = plotteropts.child('Offset').value()
-        self.parameters['plotter']['multiplier'] = plotteropts.child('Multiplier').value()
+        self.parameters['plotter']['autoscale']  = self.paramTimeSer.child('Autoscale').value()
+        self.parameters['plotter']['buffersize'] = self.paramTimeSer.child('Plot Length').value()
+        self.parameters['plotter']['offset']     = self.paramTimeSer.child('Offset').value()
+        self.parameters['plotter']['multiplier'] = self.paramTimeSer.child('Multiplier').value()
         self.calculateXAxes()
 
     def paramFftChanged(self):
         if self.debug:
             print("paramFftChanged")
-        fftopts = self.sources.child('plotopts').child('fftopts')
-        self.parameters['fft']['enable'] = fftopts.child('Enable').value()
-        self.parameters['fft']['autoscale'] = fftopts.child('Autoscale').value()
-        self.parameters['fft']['showdc'] = fftopts.child('Show DC').value()
-        self.parameters['fft']['fftsize'] = fftopts.child('NSamples').value()
+        self.paramFreqSer = self.paramFreqSer
+        self.parameters['fft']['enable']    = self.paramFreqSer.child('Enable').value()
+        self.parameters['fft']['autoscale'] = self.paramFreqSer.child('Autoscale').value()
+        self.parameters['fft']['showdc']    = self.paramFreqSer.child('Show DC').value()
+        self.parameters['fft']['fftsize']   = self.paramFreqSer.child('NSamples').value()
 
         # show/hide fft plot
-        if fftopts.child('Enable').value() == False:
+        if self.paramFreqSer.child('Enable').value() == False:
             self.glw.ci.layout.itemAt(1).setVisible(False)
         else:
             self.glw.ci.layout.itemAt(1).setVisible(True)
@@ -956,13 +954,13 @@ class SerialStudio(QMainWindow):
         self.statusBar().showMessage(msg)
         print(msg)
 
-        gconnect = self.sources.child('connect')
+        gconnect = self.paramSource.child('connect')
         connectedstr = "{} :{}".format(portname, baudrate)
         gconnect.child('connected').setOpts(visible=True, value=connectedstr)
         gconnect.setOpts(title="Disconnect")
         gconnect.sigActivated.disconnect(self.serial_connect)
         gconnect.sigActivated.connect(self.serial_disconnect)
-        self.sources.child('serialopts').hide()
+        self.paramSerial.hide()
         print(self.ser)
 
     def serial_disconnect(self):
@@ -971,12 +969,12 @@ class SerialStudio(QMainWindow):
         self.ser.close()
 
         if self.ser.is_open == False:
-            gconnect = self.sources.child('connect')
+            gconnect = self.paramSource.child('connect')
             gconnect.setOpts(title="Connect")
             gconnect.sigActivated.disconnect(self.serial_disconnect)
             gconnect.sigActivated.connect(self.serial_connect)
-            self.sources.child('serialopts').show()
-            self.sources.child('connect').child('connected').setOpts(visible=False)
+            self.paramSerial.show()
+            gconnect.child('connected').setOpts(visible=False)
 
             msg = "Disconnected"
             self.statusBar().showMessage(msg)
@@ -1141,7 +1139,7 @@ class SerialStudio(QMainWindow):
                 if len(self.dataBuffer) <= i:
                     break
                 if len(self.dataBuffer[i]) > 0:
-                    self.channels.child("Channel_{0}".format(i)).child('Value').setValue(self.dataBuffer[i][-1])
+                    self.paramChannels.child("Channel_{0}".format(i)).child('Value').setValue(self.dataBuffer[i][-1])
 
 def main():
     app = QApplication(sys.argv)

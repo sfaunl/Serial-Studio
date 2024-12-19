@@ -53,6 +53,7 @@ class ConfigParser():
                 data = json.load(json_config_file)
                 return data
         except:
+            print(f"Exception: {sys.exc_info()}")
             return
 
     def saveConfig(self, parameters:dict, filename = None):
@@ -63,6 +64,7 @@ class ConfigParser():
                 json.dump(parameters, json_config_file, indent=2)
             return True
         except:
+            print(f"Exception: {sys.exc_info()}")
             return False
 
 class SerialStudio(QMainWindow):

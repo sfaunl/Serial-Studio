@@ -218,10 +218,22 @@ class SerialStudio(QMainWindow):
             dict(name='Custom Port', type='bool', value=False, enabled=True),
             dict(name='PortList', title='Port', type='list', visible=True),
             dict(name='PortStr', title='Port', type='str', value="/dev/pts/2", visible=False),
-            dict(name='BaudRate', type='int', limits=[0, None], value=115200),
-            dict(name='Data Bits', type='list', limits=[5, 6, 7, 8], value=8),
-            dict(name='Stop Bits', type='list', limits=[1, 1.5, 2], value=1),
-            dict(name='Parity', type='list', limits={'None': 'N', 'Even': 'E', 'Odd': 'O', 'Mark': 'M', 'Space': 'S'}, value='N'),
+            dict(name='Uart Settings', type='group', expanded=True, children=[
+                dict(name='BaudRate', type='int', limits=[0, None], value=115200),
+                dict(name='Data Bits', type='list', limits=[5, 6, 7, 8], value=8),
+                dict(name='Stop Bits', type='list', limits=[1, 1.5, 2], value=1),
+                dict(name='Parity', type='list', limits={'None': 'N', 'Even': 'E', 'Odd': 'O', 'Mark': 'M', 'Space': 'S'}, value='N'),
+            ]),
+            dict(name='Device Details', type='group', expanded=False, children=[
+                dict(name='Device', type='str', value='', readonly=True),
+                dict(name='Subsystem', type='str', value='', readonly=True),
+                dict(name='Manufacturer', type='str', value='', readonly=True),
+                dict(name='Product', type='str', value='', readonly=True),
+                dict(name='Serial', type='str', value='', readonly=True),
+                dict(name='Description', type='str', value='', readonly=True),
+                dict(name='VID', type='str', value='', readonly=True),
+                dict(name='PID', type='str', value='', readonly=True),
+            ]),
         ]),
         dict(name='parseropts', title='Parser Options', type='group', children=[
             dict(name='Encoding', type='list', limits={'NONE': 0, 'COBS': 1}, value=0), #HDLC, COBS
@@ -282,6 +294,7 @@ class SerialStudio(QMainWindow):
         self.Xt = []
         self.chdata = []
         self.lastPacketTime = None
+        self.serialPorts = None
 
         self.parameters = self.defaultParams
         self.config = ConfigParser()
@@ -636,10 +649,10 @@ class SerialStudio(QMainWindow):
         with seropts.treeChangeBlocker():
             seropts.child('Custom Port').setValue(True)
             seropts.child('PortStr').setValue(self.parameters['conn']['portname'])
-            seropts.child('BaudRate').setValue(self.parameters['conn']['baudrate'])
-            seropts.child('Data Bits').setValue(self.parameters['conn']['databits'])
-            seropts.child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
-            seropts.child('Parity').setValue(self.parameters['conn']['parity'])
+            seropts.child('Uart Settings').child('BaudRate').setValue(self.parameters['conn']['baudrate'])
+            seropts.child('Uart Settings').child('Data Bits').setValue(self.parameters['conn']['databits'])
+            seropts.child('Uart Settings').child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
+            seropts.child('Uart Settings').child('Parity').setValue(self.parameters['conn']['parity'])
 
         #parseropts
         with parseropts.treeChangeBlocker():
@@ -765,21 +778,37 @@ class SerialStudio(QMainWindow):
                 seropts.child('PortList').setOpts(visible=False)
                 self.parameters['conn']['portname'] = seropts.child('PortStr').value()
             else:
-                all_comports = lp.comports()
+                self.serialPorts = lp.comports()
                 ports = {}
-                for port in sorted(all_comports):
-                    descstr =  "{} : {}, {}".format(port.device, port.manufacturer, port.description)
-                    ports[descstr] = port.device
+                for port in sorted(self.serialPorts):
+                    descstr =  "{} : {}, {}".format(port.device, port.manufacturer, port.product)
+                    if port.product is not None:
+                        ports[descstr] = port.device
 
                 seropts.child('PortStr').setOpts(visible=False)
                 seropts.child('PortList').setOpts(visible=True)
                 seropts.child('PortList').setOpts(limits=ports)
                 self.parameters['conn']['portname'] = seropts.child('PortList').value()
 
-            self.parameters['conn']['baudrate'] = seropts.child('BaudRate').value()
-            self.parameters['conn']['databits'] = seropts.child('Data Bits').value()
-            self.parameters['conn']['stopbits'] = seropts.child('Stop Bits').value()
-            self.parameters['conn']['parity'] = seropts.child('Parity').value()
+                # update the port details
+                selectedPort = None
+                for port in self.serialPorts:
+                    if port.device == self.parameters['conn']['portname']:
+                        selectedPort = port
+                if selectedPort is not None:
+                    seropts.child('Device Details').child('Device').setValue(selectedPort.device)
+                    seropts.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
+                    seropts.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
+                    seropts.child('Device Details').child('Product').setValue(selectedPort.product)
+                    seropts.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
+                    seropts.child('Device Details').child('Description').setValue(selectedPort.description)
+                    seropts.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
+                    seropts.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
+
+            self.parameters['conn']['baudrate'] = seropts.child('Uart Settings').child('BaudRate').value()
+            self.parameters['conn']['databits'] = seropts.child('Uart Settings').child('Data Bits').value()
+            self.parameters['conn']['stopbits'] = seropts.child('Uart Settings').child('Stop Bits').value()
+            self.parameters['conn']['parity']   = seropts.child('Uart Settings').child('Parity').value()
 
     def deselectAll(self):
         for ch in range(self.parameters['parser']['channel']):

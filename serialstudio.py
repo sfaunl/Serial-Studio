@@ -348,6 +348,8 @@ class SerialStudio(QMainWindow):
         self.paramChannels = ptree.Parameter.create(name='Channels', type='group')
         self.paramSource = self.paramSettings.child('sourcesopts')
         self.paramSerial = self.paramSource.child('serialopts')
+        self.paramUartSettings = self.paramSerial.child('Uart Settings')
+        self.paramDeviceDetails = self.paramSerial.child('Device Details')
         self.paramParser = self.paramSettings.child('parseropts')
         self.paramPlot   = self.paramSettings.child('plotopts')
         self.paramTimeSer = self.paramPlot.child('plotteropts')
@@ -654,10 +656,10 @@ class SerialStudio(QMainWindow):
         with self.paramSerial.treeChangeBlocker():
             self.paramSerial.child('Custom Port').setValue(True)
             self.paramSerial.child('PortStr').setValue(self.parameters['conn']['portname'])
-            self.paramSerial.child('Uart Settings').child('BaudRate').setValue(self.parameters['conn']['baudrate'])
-            self.paramSerial.child('Uart Settings').child('Data Bits').setValue(self.parameters['conn']['databits'])
-            self.paramSerial.child('Uart Settings').child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
-            self.paramSerial.child('Uart Settings').child('Parity').setValue(self.parameters['conn']['parity'])
+            self.paramUartSettings.child('BaudRate').setValue(self.parameters['conn']['baudrate'])
+            self.paramUartSettings.child('Data Bits').setValue(self.parameters['conn']['databits'])
+            self.paramUartSettings.child('Stop Bits').setValue(self.parameters['conn']['stopbits'])
+            self.paramUartSettings.child('Parity').setValue(self.parameters['conn']['parity'])
 
         #parseropts
         with self.paramParser.treeChangeBlocker():
@@ -803,32 +805,32 @@ class SerialStudio(QMainWindow):
                     if port.device == selectedPortName:
                         selectedPort = port
                 if selectedPort is not None:
-                    self.paramSerial.child('Device Details').child('Device').setValue(selectedPort.device)
-                    self.paramSerial.child('Device Details').child('Subsystem').setValue(selectedPort.subsystem)
-                    self.paramSerial.child('Device Details').child('Manufacturer').setValue(selectedPort.manufacturer)
-                    self.paramSerial.child('Device Details').child('Product').setValue(selectedPort.product)
-                    self.paramSerial.child('Device Details').child('Serial').setValue(selectedPort.serial_number)
-                    self.paramSerial.child('Device Details').child('Description').setValue(selectedPort.description)
+                    self.paramDeviceDetails.child('Device').setValue(selectedPort.device)
+                    self.paramDeviceDetails.child('Subsystem').setValue(selectedPort.subsystem)
+                    self.paramDeviceDetails.child('Manufacturer').setValue(selectedPort.manufacturer)
+                    self.paramDeviceDetails.child('Product').setValue(selectedPort.product)
+                    self.paramDeviceDetails.child('Serial').setValue(selectedPort.serial_number)
+                    self.paramDeviceDetails.child('Description').setValue(selectedPort.description)
                     if selectedPort.vid is not None:
-                        self.paramSerial.child('Device Details').child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
-                        self.paramSerial.child('Device Details').child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
+                        self.paramDeviceDetails.child('VID').setValue(selectedPort.vid.to_bytes(2, 'big').hex())
+                        self.paramDeviceDetails.child('PID').setValue(selectedPort.pid.to_bytes(2, 'big').hex())
                     else:
-                        self.paramSerial.child('Device Details').child('VID').setValue('')
-                        self.paramSerial.child('Device Details').child('PID').setValue('')
+                        self.paramDeviceDetails.child('VID').setValue('')
+                        self.paramDeviceDetails.child('PID').setValue('')
                 else:
-                    self.paramSerial.child('Device Details').child('Device').setValue('')
-                    self.paramSerial.child('Device Details').child('Subsystem').setValue('')
-                    self.paramSerial.child('Device Details').child('Manufacturer').setValue('')
-                    self.paramSerial.child('Device Details').child('Product').setValue('')
-                    self.paramSerial.child('Device Details').child('Serial').setValue('')
-                    self.paramSerial.child('Device Details').child('Description').setValue('')
-                    self.paramSerial.child('Device Details').child('VID').setValue('')
-                    self.paramSerial.child('Device Details').child('PID').setValue('')
+                    self.paramDeviceDetails.child('Device').setValue('')
+                    self.paramDeviceDetails.child('Subsystem').setValue('')
+                    self.paramDeviceDetails.child('Manufacturer').setValue('')
+                    self.paramDeviceDetails.child('Product').setValue('')
+                    self.paramDeviceDetails.child('Serial').setValue('')
+                    self.paramDeviceDetails.child('Description').setValue('')
+                    self.paramDeviceDetails.child('VID').setValue('')
+                    self.paramDeviceDetails.child('PID').setValue('')
 
-            self.parameters['conn']['baudrate'] = self.paramSerial.child('Uart Settings').child('BaudRate').value()
-            self.parameters['conn']['databits'] = self.paramSerial.child('Uart Settings').child('Data Bits').value()
-            self.parameters['conn']['stopbits'] = self.paramSerial.child('Uart Settings').child('Stop Bits').value()
-            self.parameters['conn']['parity']   = self.paramSerial.child('Uart Settings').child('Parity').value()
+            self.parameters['conn']['baudrate'] = self.paramUartSettings.child('BaudRate').value()
+            self.parameters['conn']['databits'] = self.paramUartSettings.child('Data Bits').value()
+            self.parameters['conn']['stopbits'] = self.paramUartSettings.child('Stop Bits').value()
+            self.parameters['conn']['parity']   = self.paramUartSettings.child('Parity').value()
 
     def deselectAll(self):
         for ch in range(self.parameters['parser']['channel']):

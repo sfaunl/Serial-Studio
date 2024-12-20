@@ -115,99 +115,123 @@ class SerialStudio(QMainWindow):
         'channel_config': {
             'Channel_0': {
                 'name':'CH0',
-                'color': colorPalette[0 % len(colorPalette)]
+                'color': colorPalette[0 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_1': {
                 'name':'CH1',
-                'color': colorPalette[1 % len(colorPalette)]
+                'color': colorPalette[1 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_2': {
                 'name':'CH2',
-                'color': colorPalette[2 % len(colorPalette)]
+                'color': colorPalette[2 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_3': {
                 'name':'CH3',
-                'color': colorPalette[3 % len(colorPalette)]
+                'color': colorPalette[3 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_4': {
                 'name':'CH4',
-                'color': colorPalette[4 % len(colorPalette)]
+                'color': colorPalette[4 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_5': {
                 'name':'CH5',
-                'color': colorPalette[5 % len(colorPalette)]
+                'color': colorPalette[5 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_6': {
                 'name':'CH6',
-                'color': colorPalette[6 % len(colorPalette)]
+                'color': colorPalette[6 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_7': {
                 'name':'CH7',
-                'color': colorPalette[7 % len(colorPalette)]
+                'color': colorPalette[7 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_8': {
                 'name':'CH8',
-                'color': colorPalette[8 % len(colorPalette)]
+                'color': colorPalette[8 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_9': {
                 'name':'CH9',
-                'color': colorPalette[9 % len(colorPalette)]
+                'color': colorPalette[9 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_10': {
                 'name':'CH10',
-                'color': colorPalette[10 % len(colorPalette)]
+                'color': colorPalette[10 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_11': {
                 'name':'CH11',
-                'color': colorPalette[11 % len(colorPalette)]
+                'color': colorPalette[11 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_12': {
                 'name':'CH12',
-                'color': colorPalette[12 % len(colorPalette)]
+                'color': colorPalette[12 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_13': {
                 'name':'CH13',
-                'color': colorPalette[13 % len(colorPalette)]
+                'color': colorPalette[13 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_14': {
                 'name':'CH14',
-                'color': colorPalette[14 % len(colorPalette)]
+                'color': colorPalette[14 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_15': {
                 'name':'CH15',
-                'color': colorPalette[15 % len(colorPalette)]
+                'color': colorPalette[15 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_16': {
                 'name':'CH16',
-                'color': colorPalette[16 % len(colorPalette)]
+                'color': colorPalette[16 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_17': {
                 'name':'CH17',
-                'color': colorPalette[17 % len(colorPalette)]
+                'color': colorPalette[17 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_18': {
                 'name':'CH18',
-                'color': colorPalette[18 % len(colorPalette)]
+                'color': colorPalette[18 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_19': {
                 'name':'CH19',
-                'color': colorPalette[19 % len(colorPalette)]
+                'color': colorPalette[19 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_20': {
                 'name':'CH20',
-                'color': colorPalette[20 % len(colorPalette)]
+                'color': colorPalette[20 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_21': {
                 'name':'CH21',
-                'color': colorPalette[21 % len(colorPalette)]
+                'color': colorPalette[21 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_22': {
                 'name':'CH22',
-                'color': colorPalette[22 % len(colorPalette)]
+                'color': colorPalette[22 % len(colorPalette)],
+                'enabled': True
             },
             'Channel_23': {
                 'name':'CH23',
-                'color': colorPalette[23 % len(colorPalette)]
+                'color': colorPalette[23 % len(colorPalette)],
+                'enabled': True
             }
         }
     }
@@ -702,10 +726,11 @@ class SerialStudio(QMainWindow):
             for ch in range(self.parameters['parser']['channel']):
                 chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
                 chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
+                chenabled = self.parameters['channel_config']["Channel_{}".format(ch)]['enabled']
                 numEntries = len(self.paramChannels.childs) - 2 # subtract 2 for the select all and deselect all entries
                 if numEntries > ch:
                     chEntry = self.paramChannels.child("Channel_{}".format(ch))
-                    chEntry.setValue(True)
+                    chEntry.setValue(chenabled)
                     chEntry.child('Name').setValue(chtitle)
                     chEntry.child('Color').setValue(chcolor)
 
@@ -735,6 +760,7 @@ class SerialStudio(QMainWindow):
                 rowTitle = self.paramChannels.child("Channel_{}".format(ch)).opts['title']
                 chTitle  = self.paramChannels.child("Channel_{}".format(ch)).child('Name').value()
                 chColor  = self.paramChannels.child("Channel_{}".format(ch)).child('Color').value().name()
+                chEnabled = self.paramChannels.child("Channel_{}".format(ch)).value()
                 self.paramChannels.child("Channel_{}".format(ch)).setOpts(title=chTitle)
 
                 # Check if the channel title and color has been updated
@@ -763,6 +789,7 @@ class SerialStudio(QMainWindow):
 
                 self.parameters['channel_config']["Channel_{}".format(ch)]['name'] = chTitle
                 self.parameters['channel_config']["Channel_{}".format(ch)]['color'] = chColor
+                self.parameters['channel_config']["Channel_{}".format(ch)]['enabled'] = chEnabled
 
             if len(activechs) == 0:
                 self.paramChannels.child("Select All").setOpts(visible=True)
@@ -872,10 +899,11 @@ class SerialStudio(QMainWindow):
                 for ch in range(max(numchan, childcount)):
                     chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']
                     chcolor = self.parameters['channel_config']["Channel_{}".format(ch)]['color']
+                    chenabled = self.parameters['channel_config']["Channel_{}".format(ch)]['enabled']
                     if ch >= numchan:
                         self.paramChannels.removeChild(self.paramChannels.child(("Channel_{0}".format(ch))))
                     elif ch >= childcount:
-                        newChannel = self.paramChannels.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': True})
+                        newChannel = self.paramChannels.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': chenabled})
                         newChannel.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
                         newChannel.addChild({'name': 'Color', 'type': 'color', 'value': chcolor})
                         newChannel.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})

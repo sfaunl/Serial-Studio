@@ -324,6 +324,7 @@ class SerialStudio(QMainWindow):
         self.chdata = []
         self.lastPacketTime = None
         self.serialPorts = None
+        self.nonChannelEntries = 4
 
         self.parameters = self.defaultParams
         self.config = ConfigParser()
@@ -743,18 +744,25 @@ class SerialStudio(QMainWindow):
             # update active/inactive channels variable
             activechs = []
             inactivechs = []
+            expandedchs = []
+            collapsedchs = []
 
             dataitems_t = self.plotter_t.listDataItems()
             dataitems_f = self.plotter_f.listDataItems()
             numchan = self.parameters['parser']['channel']
 
-            # Update number of active/inactive channels
+            # Update number of active/inactive collapsed/expanded channels
             for ch in range(numchan):
                 isactive = self.paramChannels.child("Channel_{}".format(ch)).value()
                 if isactive == True:
                     activechs.append(ch)
                 else:
                     inactivechs.append(ch)
+                isExpanded = self.paramChannels.child("Channel_{}".format(ch)).opts['expanded']
+                if isExpanded == True:
+                    expandedchs.append(ch)
+                else:
+                    collapsedchs.append(ch)
 
             for ch in range(numchan):
                 # Update the title of the plot
@@ -798,6 +806,13 @@ class SerialStudio(QMainWindow):
             else:
                 self.paramChannels.child("Select All").setOpts(visible=False)
                 self.paramChannels.child("Deselect All").setOpts(visible=True)
+
+            if expandedchs == []:
+                self.paramChannels.child("Collapse All").setOpts(visible=False)
+                self.paramChannels.child("Expand All").setOpts(visible=True)
+            elif collapsedchs == []:
+                self.paramChannels.child("Collapse All").setOpts(visible=True)
+                self.paramChannels.child("Expand All").setOpts(visible=False)
 
             self.parameters['channels']['activechs'] = activechs
             self.parameters['channels']['inactivechs'] = inactivechs
@@ -870,6 +885,14 @@ class SerialStudio(QMainWindow):
         for ch in range(self.parameters['parser']['channel']):
             self.paramChannels.child("Channel_{}".format(ch)).setValue(True)
 
+    def collapseAll(self):
+        for ch in range(self.parameters['parser']['channel']):
+            self.paramChannels.child("Channel_{}".format(ch)).setOpts(expanded=False)
+
+    def expandAll(self):
+        for ch in range(self.parameters['parser']['channel']):
+            self.paramChannels.child("Channel_{}".format(ch)).setOpts(expanded=True)
+
     def paramParserChanged(self):
         if self.debug:
             print("paramParserChanged")
@@ -893,9 +916,13 @@ class SerialStudio(QMainWindow):
                 if childcount == 0:
                     buttonDeselectAll = self.paramChannels.addChild({'name': "Deselect All", 'type': 'action', 'visible': True})
                     buttonSelectAll   = self.paramChannels.addChild({'name': "Select All", 'type': 'action', 'visible': False})
+                    buttonCollapseAll = self.paramChannels.addChild({'name': "Collapse All", 'type': 'action', 'visible': True})
+                    buttonExpandAll   = self.paramChannels.addChild({'name': "Expand All", 'type': 'action', 'visible': False})
                     buttonDeselectAll.sigActivated.connect(self.deselectAll)
                     buttonSelectAll.sigActivated.connect(self.selectAll)
-                childcount = len(self.paramChannels.children()) - 2
+                    buttonCollapseAll.sigActivated.connect(self.collapseAll)
+                    buttonExpandAll.sigActivated.connect(self.expandAll)
+                childcount = len(self.paramChannels.children()) - self.nonChannelEntries
 
                 for ch in range(max(numchan, childcount)):
                     chtitle = self.parameters['channel_config']["Channel_{}".format(ch)]['name']

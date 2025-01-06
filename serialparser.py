@@ -108,6 +108,10 @@ class DataType:
         lParserChar = ['b', 'B', 'h', 'H', 'l', 'L', 'q', 'Q', 'f', 'd']
         return lParserChar[aDataType]
 
+    def getHexParserChar(self, aDataType):
+        lParserChar = ['B', 'B', 'H', 'H', 'L', 'L', 'Q', 'Q', 'L', 'Q']
+        return lParserChar[aDataType]
+
 class SerialParser:
     def __init__(self,
                  aEncoding,
@@ -156,8 +160,10 @@ class SerialParser:
         self.encodedSize        = self.packetSize + Encoding().getMinOverhead(self.encoding, self.packetSize)
 
         self.parserString       = Endianness().getParserChar(self.endianness)
+        self.hexParserString    = Endianness().getParserChar(self.endianness)
         for i in range(self.numChannels):
             self.parserString += DataType().getParserChar(self.dataType)
+            self.hexParserString += DataType().getHexParserChar(self.dataType)
 
     def getPacketRate(self):
         return self.packetRate
@@ -177,6 +183,7 @@ class SerialParser:
 
     def parse(self, data):
         parsedPackets = []
+        parsedRawData = []
         self.serialBuffer.extend(data)
 
         while len(self.serialBuffer) >= self.encodedSize:
@@ -235,6 +242,7 @@ class SerialParser:
             # found a valid packet
             byteRange = self.packetBuffer[self.headerSize:self.headerSize + self.payloadSize]
             parsedValues = struct.unpack(self.parserString, byteRange)
+            rawHexValues = struct.unpack(self.hexParserString, byteRange)
 
             # check checksum
             if self.checkSum == CheckSum.CRC16_CRITT_FALSE:
@@ -251,6 +259,7 @@ class SerialParser:
                     continue
 
             parsedPackets.append(parsedValues)
+            parsedRawData.append(rawHexValues)
 
             # remove parsed packet from packetBuffer
             self.packetBuffer = self.packetBuffer[self.packetSize:]
@@ -272,7 +281,8 @@ class SerialParser:
 
         # Transpose of parsedPackets
         parsedPackets = list(map(list, zip(*parsedPackets)))
-        return parsedPackets
+        parsedRawData = list(map(list, zip(*parsedRawData)))
+        return parsedPackets, parsedRawData
 
 if __name__ == '__main__':
     print("This is a library file, please import it to use.")

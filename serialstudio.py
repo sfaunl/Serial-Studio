@@ -323,6 +323,7 @@ class SerialStudio(QMainWindow):
         self.ser = None
         self.queue = 0
         self.dataBuffer = None
+        self.rawDataBuffer = None
         self.Xt = []
         self.chdata = []
         self.lastPacketTime = None
@@ -937,7 +938,7 @@ class SerialStudio(QMainWindow):
                         newChannel = self.paramChannels.addChild({'name': "Channel_{}".format(ch), 'title': chtitle, 'type': 'bool', 'value': chenabled})
                         newChannel.addChild({'name': 'Name', 'type': 'str', 'value': chtitle})
                         newChannel.addChild({'name': 'Color', 'type': 'color', 'value': chcolor})
-                        newChannel.addChild({'name': 'Value', 'type': 'float', 'value': 0.0, 'readonly': True})
+                        newChannel.addChild({'name': 'Value', 'type': 'str', 'value': "", 'readonly': True})
             dataitems_t = self.plotter_t.listDataItems()
             dataitems_f = self.plotter_f.listDataItems()
             numdataitems = len(dataitems_t)
@@ -1075,7 +1076,7 @@ class SerialStudio(QMainWindow):
 
         self.queue = len(data)
 
-        self.dataBuffer = self.parser.parse(data)
+        self.dataBuffer, self.rawDataBuffer = self.parser.parse(data)
 
         if len(self.dataBuffer) == 0:
             return
@@ -1202,7 +1203,10 @@ class SerialStudio(QMainWindow):
                 if len(self.dataBuffer) <= i:
                     break
                 if len(self.dataBuffer[i]) > 0:
-                    self.paramChannels.child("Channel_{0}".format(i)).child('Value').setValue(self.dataBuffer[i][-1])
+                    value = self.dataBuffer[i][-1]
+                    rawValue = self.rawDataBuffer[i][-1]
+                    valueStr = "0x{:08X} ({:.5f})".format(rawValue, value)
+                    self.paramChannels.child("Channel_{0}".format(i)).child('Value').setValue(valueStr)
 
 def main():
     app = QApplication(sys.argv)

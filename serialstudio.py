@@ -5,7 +5,7 @@ Created on Sat Apr 23 02:08:23 2022
 @brief      Serial data visualizer
 @author     Sefa Unal
 
-@version    0.3.2
+@version    0.3.3
 @date       06/01/2025
 @since		v0.1 : initial release
 @since		v0.2 : add multiplier and offset
@@ -20,6 +20,7 @@ Created on Sat Apr 23 02:08:23 2022
 @since      v0.3.0 : show selected port details, add saving channel state to config file
 @since      v0.3.1 : add channel expand/collapse button
 @since      v0.3.2 : use ctrl+c signal to terminate the application
+@since      v0.3.3 : add reporting of raw packet data to display in hex format
 """
 
 from PySide6.QtWidgets import (
@@ -73,7 +74,7 @@ class ConfigParser():
 
 class SerialStudio(QMainWindow):
     appname = "Serial Studio"
-    version = "0.3.2"
+    version = "0.3.3"
 
     colorPalette = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4', '#469990', '#dcbeff', '#9A6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9']
     defaultParams = {

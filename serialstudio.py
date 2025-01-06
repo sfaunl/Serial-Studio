@@ -36,6 +36,7 @@ import os
 import sys
 import time
 import serial
+import signal
 import serial.tools.list_ports as lp
 import numpy as np
 from scipy.fftpack import fft
@@ -1204,6 +1205,7 @@ class SerialStudio(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    signal.signal(signal.SIGINT, lambda *args: app.quit())
     window = SerialStudio(debug=False)
     sys.exit(app.exec())
 
